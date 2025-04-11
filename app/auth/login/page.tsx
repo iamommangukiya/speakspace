@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSearchParams } from "next/navigation"
@@ -18,30 +18,40 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { login } = useAuth()
+  const { login, signInWithGoogle } = useAuth()  // Add signInWithGoogle here
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get("redirect") || "/dashboard"
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsLoading(true)
-
-    // Bypass authentication and redirect to dashboard
-    setTimeout(() => {
-      router.push(redirect)
-    }, 800)
-  }
-
-  const handleGoogleSignIn = () => {
-    setIsLoading(true)
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+  
+    try {
+      // Attempt to login with Firebase
+      await login(email, password);
+      // If successful, redirect to dashboard
+      router.push(redirect);
+    } catch (err) {
+      // Show error message
+      setError("Invalid email or password. Please try again.");
+      setIsLoading(false);
+    }
+  };
+  
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
     
-    // Bypass Google authentication and redirect to dashboard
-    setTimeout(() => {
-      router.push(redirect)
-    }, 800)
-  }
+    try {
+      // Use the actual Firebase Google sign-in
+      await signInWithGoogle();
+      router.push(redirect);
+    } catch (err) {
+      setError("Google sign-in failed. Please try again.");
+      setIsLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">

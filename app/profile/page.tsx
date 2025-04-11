@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
@@ -5,8 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Award, Calendar, Download, Edit, Star } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function Profile() {
+  const router = useRouter()
+
+  const handleEditProfile = () => {
+    router.push("/profile/edit")
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <MainNav />
@@ -16,7 +25,11 @@ export default function Profile() {
             <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
             <p className="text-slate-500 mt-1">View and manage your account</p>
           </div>
-          <Button variant="outline" className="mt-4 md:mt-0">
+          <Button 
+            variant="outline" 
+            className="mt-4 md:mt-0"
+            onClick={handleEditProfile}
+          >
             <Edit className="mr-2 h-4 w-4" />
             Edit Profile
           </Button>
