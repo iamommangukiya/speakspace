@@ -170,9 +170,8 @@ export const seedLeaderboardData = async () => {
     }
 
     return { success: true, message: 'Sample data seeded successfully!' };
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Error seeding data:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return { success: false, message: `Error: ${errorMessage}` };
+    return { success: false, message: `Error: ${error?.message || 'Unknown error occurred'}` };
   }
 };
