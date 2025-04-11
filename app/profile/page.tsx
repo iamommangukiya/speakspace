@@ -1,19 +1,102 @@
 "use client"
 
-import type React from "react"
+import { useEffect, useState } from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Award, Calendar, Download, Edit, Star } from "lucide-react"
+import { Award, Calendar, Download, Edit, Star, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/auth-provider"
+import { doc, getDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 export default function Profile() {
   const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
+  const [userData, setUserData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) return
+      
+      try {
+        // Get user document from Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid))
+        
+        if (userDoc.exists()) {
+          setUserData({
+            ...userDoc.data(),
+            displayName: user.displayName || userDoc.data().name,
+            email: user.email,
+            photoURL: user.photoURL || userDoc.data().photoURL
+          })
+        } else {
+          // If no user document exists, initialize with auth data
+          setUserData({
+            displayName: user.displayName || "",
+            email: user.email || "",
+            bio: "",
+            skills: "",
+            memberSince: new Date().toISOString().split('T')[0],
+            photoURL: user.photoURL || ""
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (!authLoading) {
+      fetchUserData()
+    }
+  }, [user, authLoading])
 
   const handleEditProfile = () => {
     router.push("/profile/edit")
+  }
+
+  // Get initials for avatar
+  const getInitials = () => {
+    if (!userData?.displayName) return "U"
+    return userData.displayName
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+  }
+
+  // Format skills as array
+  const getSkills = () => {
+    if (!userData?.skills) return []
+    return typeof userData.skills === 'string' 
+      ? userData.skills.split(',').map((skill: string) => skill.trim())
+      : userData.skills
+  }
+
+  // Format member since date
+  const formatMemberSince = () => {
+    if (!userData?.createdAt && !userData?.memberSince) return "Recently joined"
+    
+    const date = userData.createdAt || userData.memberSince
+    const dateObj = new Date(date)
+    
+    return dateObj.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long'
+    })
+  }
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -43,14 +126,26 @@ export default function Profile() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col items-center mb-6">
-                  <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                    <span className="text-3xl font-bold text-blue-600">AD</span>
-                  </div>
-                  <h2 className="text-xl font-bold">Alex Doe</h2>
-                  <p className="text-slate-500">alex.doe@example.com</p>
+                  {userData?.photoURL ? (
+                    <div className="w-24 h-24 rounded-full overflow-hidden mb-4">
+                      <img 
+                        src={userData.photoURL} 
+                        alt={userData.displayName || "Profile"} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                      <span className="text-3xl font-bold text-blue-600">{getInitials()}</span>
+                    </div>
+                  )}
+                  <h2 className="text-xl font-bold">{userData?.displayName || "User"}</h2>
+                  <p className="text-slate-500">{userData?.email}</p>
                   <div className="flex items-center mt-2">
                     <Star className="h-4 w-4 text-amber-500 mr-1" />
-                    <span className="text-sm font-medium">Advanced Level</span>
+                    <span className="text-sm font-medium">
+                      {userData?.level || "Beginner"} Level
+                    </span>
                   </div>
                 </div>
 
@@ -58,36 +153,42 @@ export default function Profile() {
                   <div>
                     <h3 className="text-sm font-medium mb-2">Bio</h3>
                     <p className="text-sm text-slate-600">
-                      Software engineer with 3 years of experience, currently preparing for senior roles. Passionate
-                      about system design and distributed systems.
+                      {userData?.bio || "No bio provided yet. Click 'Edit Profile' to add your bio."}
                     </p>
                   </div>
 
                   <div>
                     <h3 className="text-sm font-medium mb-2">Skills</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">
-                        Technical Interviews
-                      </span>
-                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">System Design</span>
-                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">Algorithms</span>
-                      <span className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">
-                        Public Speaking
-                      </span>
-                    </div>
+                    {getSkills().length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {getSkills().map((skill: string, index: number) => (
+                          <span 
+                            key={index} 
+                            className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-600">
+                        No skills added yet. Click 'Edit Profile' to add your skills.
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <h3 className="text-sm font-medium mb-2">Member Since</h3>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 text-slate-500 mr-2" />
-                      <span className="text-sm text-slate-600">January 2023</span>
+                      <span className="text-sm text-slate-600">{formatMemberSince()}</span>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Rest of the component remains the same */}
             <Card className="shadow-sm border-0 bg-white mt-6">
               <CardHeader className="pb-2">
                 <CardTitle>Achievements</CardTitle>
@@ -120,6 +221,7 @@ export default function Profile() {
             </Card>
           </div>
 
+          {/* Rest of the component remains the same */}
           <div className="lg:col-span-2">
             <Tabs defaultValue="progress" className="w-full">
               <TabsList className="grid w-full max-w-md grid-cols-3">
