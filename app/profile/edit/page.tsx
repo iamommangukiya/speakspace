@@ -14,6 +14,8 @@ import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db, storage } from "@/lib/firebase"
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"
 import { updateProfile } from "firebase/auth"
+import { uploadImage } from "@/lib/cloudinary";
+import { deleteImage } from "@/lib/cloudinary";
 
 export default function EditProfile() {
   const { user, isLoading: authLoading } = useAuth()
@@ -82,54 +84,52 @@ export default function EditProfile() {
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user || !e.target.files || e.target.files.length === 0) return
+    if (!user || !e.target.files || e.target.files.length === 0) return;
     
-    const file = e.target.files[0]
-    setIsLoading(true)
+    const file = e.target.files[0];
+    setIsLoading(true);
     
     try {
-      // Create a reference to the user's profile picture in Firebase Storage
-      const storageRef = ref(storage, `profile_pictures/${user.uid}`)
-      
-      // Upload the file
-      await uploadBytes(storageRef, file)
-      
-      // Get the download URL
-      const downloadURL = await getDownloadURL(storageRef)
+      // Upload to Cloudinary instead of Firebase Storage
+      const downloadURL = await uploadImage(file);
       
       // Update form data with new photo URL
       setFormData(prev => ({
         ...prev,
         photoURL: downloadURL
-      }))
+      }));
       
     } catch (error) {
-      console.error("Error uploading profile picture:", error)
+      console.error("Error uploading profile picture:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   const handleRemovePhoto = async () => {
-    if (!user || !formData.photoURL) return
+    if (!user || !formData.photoURL) return;
     
-    setIsLoading(true)
+    setIsLoading(true);
     
     try {
-      // Delete the file from Firebase Storage
-      const storageRef = ref(storage, `profile_pictures/${user.uid}`)
-      await deleteObject(storageRef)
+      // Extract public ID from Cloudinary URL
+      const urlParts = formData.photoURL.split('/');
+      const publicIdWithExtension = urlParts[urlParts.length - 1];
+      const publicId = publicIdWithExtension.split('.')[0];
+      
+      // Delete from Cloudinary
+      await deleteImage(`profile_pictures/${publicId}`);
       
       // Update form data
       setFormData(prev => ({
         ...prev,
         photoURL: ""
-      }))
+      }));
       
     } catch (error) {
-      console.error("Error removing profile picture:", error)
+      console.error("Error removing profile picture:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
