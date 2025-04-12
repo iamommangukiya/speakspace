@@ -21,7 +21,7 @@ export default function LoginPage() {
   const { login, signInWithGoogle } = useAuth()  // Add signInWithGoogle here
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get("redirect") || "/dashboard"
+  const redirect = searchParams?.get("redirect") || "/dashboard"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
