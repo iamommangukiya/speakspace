@@ -47,7 +47,7 @@ export default function Dashboard() {
             size="lg"
             asChild
           >
-            <Link href="/practice">
+            <Link href="/live-sessions" rel="noopener">
               <MessageSquare className="mr-2 h-5 w-5" />
               Start Practice
             </Link>

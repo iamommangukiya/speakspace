@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { login } = useAuth()
+  const { login, loginWithGoogle } = useAuth()
   const searchParams = useSearchParams()
   const redirect = searchParams.get("redirect") || "/dashboard"
 
@@ -31,6 +31,19 @@ export default function LoginPage() {
       await login(email, password)
     } catch (err) {
       setError("Invalid email or password. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setError(null)
+    setIsLoading(true)
+    
+    try {
+      await loginWithGoogle()
+    } catch (err) {
+      setError("Google login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -111,7 +124,12 @@ export default function LoginPage() {
                 <Github className="mr-2 h-4 w-4" />
                 GitHub
               </Button>
-              <Button variant="outline" className="h-11 shadow-sm hover:shadow" disabled={isLoading}>
+              <Button 
+                variant="outline" 
+                className="h-11 shadow-sm hover:shadow" 
+                disabled={isLoading}
+                onClick={handleGoogleLogin}
+              >
                 <Mail className="mr-2 h-4 w-4" />
                 Google
               </Button>

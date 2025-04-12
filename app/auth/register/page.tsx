@@ -21,7 +21,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [acceptTerms, setAcceptTerms] = useState(false)
-  const { register } = useAuth()
+  const { register, loginWithGoogle } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,6 +43,24 @@ export default function RegisterPage() {
       await register(name, email, password)
     } catch (err) {
       setError("Registration failed. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    if (!acceptTerms) {
+      setError("You must accept the Terms and Conditions to create an account")
+      return
+    }
+    
+    setError(null)
+    setIsLoading(true)
+    
+    try {
+      await loginWithGoogle()
+    } catch (err) {
+      setError("Google login failed. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -161,7 +179,12 @@ export default function RegisterPage() {
                 <Github className="mr-2 h-4 w-4" />
                 GitHub
               </Button>
-              <Button variant="outline" className="h-11 shadow-sm hover:shadow" disabled={isLoading}>
+              <Button 
+                variant="outline" 
+                className="h-11 shadow-sm hover:shadow" 
+                disabled={isLoading}
+                onClick={handleGoogleLogin}
+              >
                 <Mail className="mr-2 h-4 w-4" />
                 Google
               </Button>

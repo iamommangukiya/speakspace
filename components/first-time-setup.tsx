@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { MainNav } from "@/components/main-nav"
 import { useAuth } from "@/components/auth-provider"
 import { ArrowRight, CheckCircle2, Target } from "lucide-react"
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 export function FirstTimeSetup({ onComplete }: { onComplete: () => void }) {
   const { user } = useAuth()
@@ -15,22 +17,43 @@ export function FirstTimeSetup({ onComplete }: { onComplete: () => void }) {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [goals, setGoals] = useState("")
   const [selectedRole, setSelectedRole] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSkillToggle = (skill: string) => {
     setSelectedSkills((prev) => (prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]))
   }
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1)
     } else {
-      // Save preferences to localStorage
-      localStorage.setItem("speakspace_user_skills", JSON.stringify(selectedSkills))
-      localStorage.setItem("speakspace_user_goals", goals)
-      localStorage.setItem("speakspace_user_role", selectedRole || "")
+      setIsSubmitting(true)
+      try {
+        // Save preferences to localStorage for backward compatibility
+        localStorage.setItem("speakspace_user_skills", JSON.stringify(selectedSkills))
+        localStorage.setItem("speakspace_user_goals", goals)
+        localStorage.setItem("speakspace_user_role", selectedRole || "")
+        localStorage.setItem("speakspace_onboarding_complete", "true")
 
-      // Complete onboarding
-      onComplete()
+        // Save user preferences to Firestore if user is authenticated
+        if (user?.id) {
+          await setDoc(doc(db, "users", user.id), {
+            skills: selectedSkills,
+            goals: goals,
+            preferredRole: selectedRole,
+            onboardingCompleted: true,
+            onboardingCompletedAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          }, { merge: true })
+        }
+
+        // Complete onboarding
+        onComplete()
+      } catch (error) {
+        console.error("Error saving user preferences:", error)
+      } finally {
+        setIsSubmitting(false)
+      }
     }
   }
 
@@ -190,8 +213,18 @@ export function FirstTimeSetup({ onComplete }: { onComplete: () => void }) {
                 <Button
                   onClick={handleNextStep}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
+                  disabled={isSubmitting}
                 >
-                  Complete Setup <CheckCircle2 className="ml-2 h-4 w-4" />
+                  {isSubmitting ? (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      Complete Setup <CheckCircle2 className="ml-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </CardFooter>
             </Card>
