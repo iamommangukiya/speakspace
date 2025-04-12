@@ -7,7 +7,8 @@
     "tunnel": "ngrok http 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "npm rebuild sharp && npm rebuild @firebase/util && npm rebuild protobufjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
