@@ -19,9 +19,9 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   signupWithEmail: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<User>;
   logout: () => Promise<void>;
   updateUserProfile: (data: { displayName?: string, photoURL?: string }) => Promise<void>;
   uploadProfilePicture: (file: File) => Promise<string>;
@@ -32,10 +32,12 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
-  login: async () => {},
+  login: async () => { throw new Error("Login function not implemented"); },
   signupWithEmail: async () => {},
-  signInWithGoogle: async () => {},
+  signInWithGoogle: async () => { throw new Error("Google sign-in not implemented"); },
   logout: async () => {},
+  updateUserProfile: async () => {},
+  uploadProfilePicture: async () => { return ""; },
   error: null,
 });
 

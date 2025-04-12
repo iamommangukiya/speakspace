@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
@@ -6,27 +8,77 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Award, Calendar, Clock, MessageSquare, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
+import { useState, useEffect } from "react"
+import { db } from "@/lib/firebase"
+import { doc, getDoc } from "firebase/firestore"
+import { Input } from "@/components/ui/input"
+import { useRouter } from "next/navigation"
 
-export default function Dashboard() {
+export default function Dashboard({ userId }: { userId: string }) {
+  const [userName, setUserName] = useState<string | null>(null)
+  const [sessionCode, setSessionCode] = useState("")
+  const router = useRouter()
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (!userId) return;
+        
+        const userDoc = await getDoc(doc(db, "users", userId));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setUserName(userData.name || userData.displayName || "User");
+
+          console.log(userData)
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleJoinSession = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (sessionCode.trim()) {
+      router.push(`/practice/session/${sessionCode}`)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <MainNav />
       <main className="container mx-auto pt-24 pb-16 px-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Welcome back, Alex!</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {userName}</h1>
             <p className="text-slate-500 mt-1">Track your progress and join discussions</p>
           </div>
-          <Button
-            className="mt-4 md:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
-            size="lg"
-            asChild
-          >
-            <Link href="/practice">
-              <MessageSquare className="mr-2 h-5 w-5" />
-              Start Practice
-            </Link>
-          </Button>
+          <div className="flex flex-col md:flex-row gap-3 mt-4 md:mt-0">
+            <form onSubmit={handleJoinSession} className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="Enter session code"
+                value={sessionCode}
+                onChange={(e) => setSessionCode(e.target.value)}
+                className="w-40 h-10"
+              />
+              <Button type="submit" variant="outline" size="sm">
+                Join
+              </Button>
+            </form>
+            <Button
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
+              size="lg"
+              asChild
+            >
+              <Link href="/practice">
+                <MessageSquare className="mr-2 h-5 w-5" />
+                Start Practice
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

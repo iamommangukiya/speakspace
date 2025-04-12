@@ -1,10 +1,12 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { BarChart3, BookOpen, Home, LogOut, MessageSquare, Settings, User } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 
 const navItems = [
@@ -36,7 +38,22 @@ const navItems = [
 ]
 
 export function MainNav() {
+  const [isClient, setIsClient] = useState(false)
+  const router = useRouter()
   const pathname = usePathname()
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  const handleLogout = async () => {
+    if (!isClient) return
+    const success = await logout()
+    if (true) {
+      router.push("/auth/login")
+    }
+  }
+
   const { logout } = useAuth()
 
   return (
@@ -69,7 +86,7 @@ export function MainNav() {
           <Button variant="ghost" size="icon" className="mr-2" aria-label="Settings">
             <Settings className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-red-500" aria-label="Log out" onClick={logout}>
+          <Button variant="ghost" size="icon" className="text-red-500" aria-label="Log out" onClick={handleLogout}>
             <LogOut className="w-5 h-5" />
           </Button>
         </div>
