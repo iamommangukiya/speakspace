@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react"
 import type React from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
@@ -5,8 +8,121 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Download, FileText, Filter, Search, Video } from "lucide-react"
+import ResumeUpload from "@/components/ResumeUpload"
+import { useAuth } from "@/components/auth-provider"
 
-export default function Resources() {
+interface ResourceCardProps {
+  title: string;
+  description: string;
+  type: string;
+  icon: React.ReactNode;
+  tags: string[];
+  isNew?: boolean;
+}
+
+interface FeaturedResourceCardProps extends ResourceCardProps {}
+
+interface RecommendedResourceCardProps {
+  title: string;
+  description: string;
+  reason: string;
+}
+
+// Move these component definitions to the top
+const FeaturedResourceCard: React.FC<FeaturedResourceCardProps> = ({ title, description, type, icon, tags }) => (
+  <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-shadow">
+    <CardContent className="p-6">
+      <div className="flex items-start gap-4 mb-4">
+        <div className="p-3 bg-slate-100 rounded-full">{icon}</div>
+        <div>
+          <Badge variant="outline" className="mb-2 bg-blue-50 text-blue-700 border-blue-100">
+            {type}
+          </Badge>
+          <h3 className="font-bold text-lg mb-2">{title}</h3>
+          <p className="text-sm text-slate-600 mb-3">{description}</p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {tags.map((tag, index) => (
+          <span key={index} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">
+            {tag}
+          </span>
+        ))}
+      </div>
+      <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm transition-all hover:shadow">
+        Access Resource
+      </Button>
+    </CardContent>
+  </Card>
+);
+
+const ResourceCard: React.FC<ResourceCardProps> = ({ title, description, type, icon, tags, isNew = false }) => (
+  <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-shadow">
+    <CardContent className="p-6">
+      <div className="flex justify-between items-start mb-3">
+        <Badge variant="outline" className="bg-slate-100 text-slate-700 border-0">
+          {type}
+        </Badge>
+        {isNew && <Badge className="bg-green-100 text-green-700 border-0 hover:bg-green-100">New</Badge>}
+      </div>
+      <h3 className="font-bold text-lg mb-2">{title}</h3>
+      <p className="text-sm text-slate-600 mb-3">{description}</p>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {tags.map((tag, index) => (
+          <span key={index} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">
+            {tag}
+          </span>
+        ))}
+      </div>
+      <div className="flex justify-between">
+        <Button variant="outline" size="sm" className="text-blue-600">
+          <BookOpen className="h-4 w-4 mr-2" />
+          View
+        </Button>
+        <Button variant="outline" size="sm">
+          <Download className="h-4 w-4 mr-2" />
+          Download
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+)
+
+const RecommendedResourceCard: React.FC<RecommendedResourceCardProps> = ({ title, description, reason }) => (
+  <div className="flex p-4 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
+    <div className="mr-4 p-3 bg-blue-100 rounded-full h-fit">
+      <BookOpen className="h-5 w-5 text-blue-600" />
+    </div>
+    <div>
+      <h3 className="font-medium text-lg mb-1">{title}</h3>
+      <p className="text-sm text-slate-600 mb-2">{description}</p>
+      <div className="flex items-center">
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100">
+          Recommended
+        </Badge>
+        <span className="text-xs text-slate-500 ml-2">{reason}</span>
+      </div>
+    </div>
+  </div>
+);
+
+export default function ResourcesPage() {
+  const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Add error boundary
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <MainNav />
@@ -183,13 +299,9 @@ export default function Resources() {
                 <CardDescription>Templates and guides for creating an effective resume</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <h3 className="text-lg font-medium text-slate-600 mb-4">Switch to the "All Resources" tab</h3>
-                  <p className="text-slate-500 max-w-md mx-auto">
-                    We've simplified this demo to show all resources in one tab. In a full implementation, this tab
-                    would show resume-specific resources.
-                  </p>
-                </div>
+                <ResumeUpload>
+                  
+                </ResumeUpload>
               </CardContent>
             </Card>
           </TabsContent>
@@ -216,123 +328,6 @@ export default function Resources() {
           </CardContent>
         </Card>
       </main>
-    </div>
-  )
-}
-
-function FeaturedResourceCard({
-  title,
-  description,
-  type,
-  icon,
-  tags,
-}: {
-  title: string
-  description: string
-  type: string
-  icon: React.ReactNode
-  tags: string[]
-}) {
-  return (
-    <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-start gap-4 mb-4">
-          <div className="p-3 bg-slate-100 rounded-full">{icon}</div>
-          <div>
-            <Badge variant="outline" className="mb-2 bg-blue-50 text-blue-700 border-blue-100">
-              {type}
-            </Badge>
-            <h3 className="font-bold text-lg mb-2">{title}</h3>
-            <p className="text-sm text-slate-600 mb-3">{description}</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {tags.map((tag, index) => (
-            <span key={index} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">
-              {tag}
-            </span>
-          ))}
-        </div>
-        <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm transition-all hover:shadow">
-          Access Resource
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ResourceCard({
-  title,
-  description,
-  type,
-  icon,
-  tags,
-  isNew = false,
-}: {
-  title: string
-  description: string
-  type: string
-  icon: React.ReactNode
-  tags: string[]
-  isNew?: boolean
-}) {
-  return (
-    <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start mb-3">
-          <Badge variant="outline" className="bg-slate-100 text-slate-700 border-0">
-            {type}
-          </Badge>
-          {isNew && <Badge className="bg-green-100 text-green-700 border-0 hover:bg-green-100">New</Badge>}
-        </div>
-        <h3 className="font-bold text-lg mb-2">{title}</h3>
-        <p className="text-sm text-slate-600 mb-3">{description}</p>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {tags.map((tag, index) => (
-            <span key={index} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">
-              {tag}
-            </span>
-          ))}
-        </div>
-        <div className="flex justify-between">
-          <Button variant="outline" size="sm" className="text-blue-600">
-            <BookOpen className="h-4 w-4 mr-2" />
-            View
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function RecommendedResourceCard({
-  title,
-  description,
-  reason,
-}: {
-  title: string
-  description: string
-  reason: string
-}) {
-  return (
-    <div className="flex p-4 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
-      <div className="mr-4 p-3 bg-blue-100 rounded-full h-fit">
-        <BookOpen className="h-5 w-5 text-blue-600" />
-      </div>
-      <div>
-        <h3 className="font-medium text-lg mb-1">{title}</h3>
-        <p className="text-sm text-slate-600 mb-2">{description}</p>
-        <div className="flex items-center">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100">
-            Recommended
-          </Badge>
-          <span className="text-xs text-slate-500 ml-2">{reason}</span>
-        </div>
-      </div>
     </div>
   )
 }
