@@ -8,7 +8,16 @@ import { VideoCall } from "@/components/video-call"
 import { SessionChat } from "@/components/session-chat"
 import { useAuth } from "@/components/auth-provider"
 
-export function SessionInterface() {
+export interface SessionInterfaceProps {
+  sessionId: string
+  userId: string
+  userName: string
+  isHost: boolean
+  onEndCall: () => void
+  onToggleChat: () => void
+}
+
+export function SessionInterface({ sessionId, userId, userName, isHost, onEndCall, onToggleChat }: SessionInterfaceProps) {
   const { user } = useAuth()
   const [showChat, setShowChat] = useState(true)
   const [activeTab, setActiveTab] = useState("session")

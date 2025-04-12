@@ -7,6 +7,9 @@ import { Share2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { VideoChat } from "@/components/video-chat"
 
+import { rtdb } from "@/lib/firebase" // Make sure you have Firebase configured
+import { ref, set, onValue, off } from "firebase/database"
+
 interface VideoCallProps {
   sessionId: string
   userId: string
@@ -23,44 +26,77 @@ export function VideoCall({ sessionId, userId, userName, isHost, onEndCall, onTo
   const [participants, setParticipants] = useState<string[]>([])
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({})
+  const peerConnections = useRef<{ [key: string]: RTCPeerConnection }>({})
+  const [isConnecting, setIsConnecting] = useState(true)
 
   useEffect(() => {
-    // Initialize local video stream
-    const setupLocalStream = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: videoEnabled,
-          audio: micEnabled
+
+    
+    // Update to use rtdb reference
+    const roomRef = ref(rtdb, `meetings/${sessionId}`)
+    
+    const setupMeeting = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: videoEnabled,
+        audio: micEnabled
+      })
+      
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream
+      }
+
+      if (isHost) {
+        // Create room in realtime database
+        await set(roomRef, {
+          hostId: userId,
+          participants: { [userId]: userName },
+          createdAt: Date.now()
+        })
+      } else {
+        // Join existing room
+        const pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
         })
         
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream
+        // Add local stream
+        stream.getTracks().forEach(track => {
+          pc.addTrack(track, stream)
+        })
+
+        // Handle incoming streams
+        pc.ontrack = (event) => {
+          if (remoteVideoRefs.current["host"]) {
+            remoteVideoRefs.current["host"].srcObject = event.streams[0]
+          }
         }
+
+        // Create and send offer
+        const offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
         
-        // Here you would connect to your WebRTC service
-        // initializeWebRTCConnection(stream)
-        
-      } catch (error) {
-        console.error("Error accessing media devices:", error)
-        setVideoEnabled(false)
-        setMicEnabled(false)
+        await set(ref(rtdb, `meetings/${sessionId}/offers/${userId}`), {
+          type: offer.type,
+          sdp: offer.sdp,
+          userId,
+          userName,
+          timestamp: Date.now()
+        })
+
+        peerConnections.current["host"] = pc
       }
     }
-    
-    setupLocalStream()
-    
-    // Mock adding participants for demo
-    const mockParticipants = ["user1", "user2", "user3"].filter(id => id !== userId)
-    setParticipants(mockParticipants)
-    
+
+    setupMeeting()
+
+    // Cleanup
     return () => {
-      // Cleanup function to stop all media tracks
-      const stream = localVideoRef.current?.srcObject as MediaStream
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop())
-      }
+      off(roomRef)
+      Object.values(peerConnections.current).forEach(pc => pc.close())
     }
-  }, [sessionId, userId])
+  }, [sessionId, userId, isHost])
 
   const toggleMic = () => {
     const stream = localVideoRef.current?.srcObject as MediaStream

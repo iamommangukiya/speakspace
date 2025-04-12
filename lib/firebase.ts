@@ -8,7 +8,7 @@ const firebaseConfig = {
   authDomain: "speakspace-9a3ee.firebaseapp.com",
   databaseURL: "https://speakspace-9a3ee-default-rtdb.firebaseio.com",
   projectId: "speakspace-9a3ee",
-  storageBucket: "speakspace-9a3ee.firebasestorage.app",
+  storageBucket: "speakspace-9a3ee.appspot.com",
   messagingSenderId: "221359219016",
   appId: "1:221359219016:web:6d03627d703baf9ebd537d",
   measurementId: "G-JP444HGR42"
@@ -20,5 +20,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
+import { getDatabase } from "firebase/database";
+const rtdb = getDatabase(app);
 
-export { auth, db, storage, googleProvider };
+export { auth, db, storage,rtdb, googleProvider };
