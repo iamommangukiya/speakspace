@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Github, Loader2, Mail } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
@@ -20,50 +20,34 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { signupWithEmail, updateUserProfile, signInWithGoogle } = useAuth()
-  const router = useRouter()
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const { register } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      const user = await signupWithEmail(email, password);
-      
-      // After successful registration, update the user profile with the name
-      if (user) {
-        await updateUserProfile({ displayName: name });
-      }
-      
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error("Registration error details:", error);
-      // Log the specific error code if available
-      if (error.code) {
-        console.error("Error code:", error.code);
-      }
-      setError(error.message || "Registration failed. Please try again.");
-      setIsLoading(false);
-    }
-  };
+    e.preventDefault()
+    setError(null)
 
-  const handleGoogleSignIn = async () => {
-    try {
-      setIsLoading(true);
-      await signInWithGoogle();
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error("Google sign-in error:", error);
-      setError(error.message || "Google sign-in failed. Please try again.");
-      setIsLoading(false);
+    if (!acceptTerms) {
+      setError("You must accept the Terms and Conditions to create an account")
+      return
     }
-  };
-  
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      await register(name, email, password)
+    } catch (err) {
+      setError("Registration failed. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <Card className="w-full max-w-md shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -86,7 +70,7 @@ export default function RegisterPage() {
                 id="name"
                 placeholder="John Doe"
                 required
-                className="w-full h-11 px-3 py-2" // Updated styles
+                className="h-11"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={isLoading}
@@ -99,7 +83,7 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="name@example.com"
                 required
-                className="w-full h-11 px-3 py-2" // Updated styles
+                className="h-11"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
@@ -111,7 +95,7 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 required
-                className="w-full h-11 px-3 py-2" // Updated styles
+                className="h-11"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
@@ -123,18 +107,37 @@ export default function RegisterPage() {
                 id="confirm-password"
                 type="password"
                 required
-                className="w-full h-11 px-3 py-2" // Updated styles
+                className="h-11"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isLoading}
               />
+            </div>
+            <div className="flex items-start space-x-2 pt-2">
+              <Checkbox
+                id="terms"
+                checked={acceptTerms}
+                onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label htmlFor="terms" className="text-sm text-slate-500 leading-tight">
+                  I accept the{" "}
+                  <Link href="/terms" className="text-blue-600 hover:text-blue-800 underline">
+                    Terms and Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy" className="text-blue-600 hover:text-blue-800 underline">
+                    Privacy Policy
+                  </Link>
+                </label>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button
               type="submit"
               className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
-              disabled={isLoading}
+              disabled={isLoading || !acceptTerms}
             >
               {isLoading ? (
                 <>
@@ -154,22 +157,11 @@ export default function RegisterPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Button 
-                variant="outline" 
-                className="h-11 shadow-sm hover:shadow" 
-                disabled={isLoading}
-                type="button"
-              >
+              <Button variant="outline" className="h-11 shadow-sm hover:shadow" disabled={isLoading}>
                 <Github className="mr-2 h-4 w-4" />
                 GitHub
               </Button>
-              <Button 
-                variant="outline" 
-                className="h-11 shadow-sm hover:shadow" 
-                disabled={isLoading}
-                type="button"
-                onClick={handleGoogleSignIn}
-              >
+              <Button variant="outline" className="h-11 shadow-sm hover:shadow" disabled={isLoading}>
                 <Mail className="mr-2 h-4 w-4" />
                 Google
               </Button>

@@ -1,118 +1,134 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
-import { FcGoogle } from "react-icons/fc";
+import type React from "react"
+
+import { useState } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Github, Mail } from "lucide-react"
 
 export function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Bypass authentication and redirect to dashboard
+    e.preventDefault()
+    setIsLoading(true)
+    // Simulate API call
     setTimeout(() => {
-      router.push("/dashboard");
-      setIsLoading(false);
-    }, 800); // Reduced delay for faster redirection
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    
-    // Bypass Google authentication and redirect to dashboard
-    setTimeout(() => {
-      router.push("/dashboard");
-      setIsLoading(false);
-    }, 800); // Reduced delay for faster redirection
-  };
+      setIsLoading(false)
+      window.location.href = "/dashboard"
+    }, 1000)
+  }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>{isSignUp ? "Create Account" : "Login"}</CardTitle>
-        <CardDescription>
-          {isSignUp
-            ? "Sign up to start practicing and improving your skills"
-            : "Login to access your account and continue your practice"}
-        </CardDescription>
+    <Card className="w-full max-w-md shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+      <CardHeader className="space-y-2 text-center">
+        <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          SpeakSpace
+        </CardTitle>
+        <CardDescription>Enhance your GD & interview skills in real-time</CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="your.email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isSignUp ? "Creating account..." : "Logging in..."}
-              </>
-            ) : (
-              <>{isSignUp ? "Create Account" : "Login"}</>
-            )}
-          </Button>
-        </form>
-
-        <div className="flex items-center my-4">
-          <Separator className="flex-grow" />
-          <span className="mx-2 text-sm text-gray-500">OR</span>
-          <Separator className="flex-grow" />
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={handleGoogleSignIn}
-          disabled={isLoading}
-        >
-          <FcGoogle className="mr-2 h-5 w-5" />
-          {isSignUp ? "Sign up with Google" : "Login with Google"}
-        </Button>
-      </CardContent>
-      <CardFooter className="flex justify-center">
-        <p className="text-sm text-gray-500">
-          {isSignUp ? "Already have an account? " : "Don't have an account? "}
-          <Button
-            variant="link"
-            className="p-0 h-auto"
-            onClick={() => setIsSignUp(!isSignUp)}
-          >
-            {isSignUp ? "Login" : "Create Account"}
-          </Button>
-        </p>
-      </CardFooter>
+      <Tabs defaultValue="login" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="login">Login</TabsTrigger>
+          <TabsTrigger value="register">Register</TabsTrigger>
+        </TabsList>
+        <TabsContent value="login">
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="name@example.com" required className="h-11" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link href="#" className="text-sm text-blue-600 hover:text-blue-800">
+                    Forgot password?
+                  </Link>
+                </div>
+                <Input id="password" type="password" required className="h-11" />
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4">
+              <Button
+                type="submit"
+                className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Button>
+              <div className="relative w-full">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-slate-500">Or continue with</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Button variant="outline" className="h-11 shadow-sm hover:shadow">
+                  <Github className="mr-2 h-4 w-4" />
+                  GitHub
+                </Button>
+                <Button variant="outline" className="h-11 shadow-sm hover:shadow">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Google
+                </Button>
+              </div>
+            </CardFooter>
+          </form>
+        </TabsContent>
+        <TabsContent value="register">
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" placeholder="John Doe" required className="h-11" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="name@example.com" required className="h-11" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" required className="h-11" />
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4">
+              <Button
+                type="submit"
+                className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating account..." : "Create Account"}
+              </Button>
+              <div className="relative w-full">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-slate-500">Or continue with</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Button variant="outline" className="h-11 shadow-sm hover:shadow">
+                  <Github className="mr-2 h-4 w-4" />
+                  GitHub
+                </Button>
+                <Button variant="outline" className="h-11 shadow-sm hover:shadow">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Google
+                </Button>
+              </div>
+            </CardFooter>
+          </form>
+        </TabsContent>
+      </Tabs>
     </Card>
-  );
+  )
 }

@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,40 +18,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { login, signInWithGoogle } = useAuth()  // Add signInWithGoogle here
-  const router = useRouter()
+  const { login } = useAuth()
   const searchParams = useSearchParams()
-  const redirect = searchParams?.get("redirect") || "/dashboard"
+  const redirect = searchParams.get("redirect") || "/dashboard"
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-  
+    e.preventDefault()
+    setError(null)
+    setIsLoading(true)
+
     try {
-      // Attempt to login with Firebase
-      await login(email, password);
-      // If successful, redirect to dashboard
-      router.push(redirect);
+      await login(email, password)
     } catch (err) {
-      // Show error message
-      setError("Invalid email or password. Please try again.");
-      setIsLoading(false);
+      setError("Invalid email or password. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
-  };
-  
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Use the actual Firebase Google sign-in
-      await signInWithGoogle();
-      router.push(redirect);
-    } catch (err) {
-      setError("Google sign-in failed. Please try again.");
-      setIsLoading(false);
-    }
-  };
+  }
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
@@ -76,7 +59,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="name@example.com"
                 required
-                className="w-full h-11 px-3 py-2"
+                className="h-11"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
@@ -93,7 +76,7 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 required
-                className="w-full h-11 px-3 py-2"
+                className="h-11"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
@@ -124,23 +107,11 @@ export default function LoginPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Button 
-                variant="outline" 
-                className="h-11 shadow-sm hover:shadow" 
-                disabled={isLoading}
-                onClick={() => handleGoogleSignIn()}
-                type="button"
-              >
+              <Button variant="outline" className="h-11 shadow-sm hover:shadow" disabled={isLoading}>
                 <Github className="mr-2 h-4 w-4" />
                 GitHub
               </Button>
-              <Button 
-                variant="outline" 
-                className="h-11 shadow-sm hover:shadow" 
-                disabled={isLoading}
-                onClick={() => handleGoogleSignIn()}
-                type="button"
-              >
+              <Button variant="outline" className="h-11 shadow-sm hover:shadow" disabled={isLoading}>
                 <Mail className="mr-2 h-4 w-4" />
                 Google
               </Button>

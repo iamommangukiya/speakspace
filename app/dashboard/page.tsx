@@ -4,50 +4,33 @@ import type React from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Award, Calendar, Clock, MessageSquare, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
-import { useState, useEffect } from "react"
-import { db } from "@/lib/firebase"
-import { doc, getDoc } from "firebase/firestore"
-import { Input } from "@/components/ui/input"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider" // Import useAuth
+import { useAuth } from "@/components/auth-provider"
+import { useEffect, useState } from "react"
+import { FirstTimeSetup } from "@/components/first-time-setup"
+import { StarRating } from "@/components/star-rating"
 
 export default function Dashboard() {
-  const { user, isLoading: authLoading } = useAuth() // Use useAuth to get user
-  const [userName, setUserName] = useState<string | null>(null)
-  const [sessionCode, setSessionCode] = useState("")
-  const router = useRouter()
+  const { user } = useAuth()
+  const [isFirstTime, setIsFirstTime] = useState(false)
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (!user) return
-      
-      try {
-        // Get user document from Firestore
-        const userDoc = await getDoc(doc(db, "users", user.uid))
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data()
-          setUserName(user.displayName || userData.name || "User")
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error)
-      }
+    // Check if this is the user's first time
+    const hasCompletedOnboarding = localStorage.getItem("speakspace_onboarding_complete")
+    if (!hasCompletedOnboarding) {
+      setIsFirstTime(true)
     }
+  }, [])
 
-    if (!authLoading) {
-      fetchUserData()
-    }
-  }, [user, authLoading]) // Added user and authLoading as dependencies
+  const completeOnboarding = () => {
+    localStorage.setItem("speakspace_onboarding_complete", "true")
+    setIsFirstTime(false)
+  }
 
-  const handleJoinSession = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (sessionCode.trim()) {
-      router.push(`/practice/session/${sessionCode}`)
-    }
+  if (isFirstTime) {
+    return <FirstTimeSetup onComplete={completeOnboarding} />
   }
 
   return (
@@ -56,33 +39,19 @@ export default function Dashboard() {
       <main className="container mx-auto pt-24 pb-16 px-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {userName}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user?.name?.split(" ")[0] || "User"}!</h1>
             <p className="text-slate-500 mt-1">Track your progress and join discussions</p>
           </div>
-          <div className="flex flex-col md:flex-row gap-3 mt-4 md:mt-0">
-            <form onSubmit={handleJoinSession} className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="Enter session code"
-                value={sessionCode}
-                onChange={(e) => setSessionCode(e.target.value)}
-                className="w-40 h-10"
-              />
-              <Button type="submit" variant="outline" size="sm">
-                Join
-              </Button>
-            </form>
-            <Button
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
-              size="lg"
-              asChild
-            >
-              <Link href="/practice">
-                <MessageSquare className="mr-2 h-5 w-5" />
-                Start Practice
-              </Link>
-            </Button>
-          </div>
+          <Button
+            className="mt-4 md:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
+            size="lg"
+            asChild
+          >
+            <Link href="/practice">
+              <MessageSquare className="mr-2 h-5 w-5" />
+              Start Practice
+            </Link>
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -93,9 +62,9 @@ export default function Dashboard() {
             icon={<MessageSquare className="h-5 w-5 text-blue-600" />}
           />
           <StatsCard
-            title="Average Score"
-            value="78%"
-            description="+5% improvement"
+            title="Average Rating"
+            value={<StarRating value={8} max={10} readOnly size="sm" />}
+            description="+0.5 improvement"
             icon={<TrendingUp className="h-5 w-5 text-green-600" />}
           />
           <StatsCard
@@ -123,19 +92,19 @@ export default function Dashboard() {
                     </TabsList>
                   </div>
                   <TabsContent value="weekly" className="space-y-6">
-                    <SkillProgress title="Confidence" value={75} />
-                    <SkillProgress title="Communication" value={82} />
-                    <SkillProgress title="Logical Reasoning" value={68} />
+                    <SkillProgress title="Confidence" value={7.5} />
+                    <SkillProgress title="Communication" value={8.2} />
+                    <SkillProgress title="Logical Reasoning" value={6.8} />
                   </TabsContent>
                   <TabsContent value="monthly" className="space-y-6">
-                    <SkillProgress title="Confidence" value={70} />
-                    <SkillProgress title="Communication" value={78} />
-                    <SkillProgress title="Logical Reasoning" value={65} />
+                    <SkillProgress title="Confidence" value={7.0} />
+                    <SkillProgress title="Communication" value={7.8} />
+                    <SkillProgress title="Logical Reasoning" value={6.5} />
                   </TabsContent>
                   <TabsContent value="yearly" className="space-y-6">
-                    <SkillProgress title="Confidence" value={60} />
-                    <SkillProgress title="Communication" value={72} />
-                    <SkillProgress title="Logical Reasoning" value={58} />
+                    <SkillProgress title="Confidence" value={6.0} />
+                    <SkillProgress title="Communication" value={7.2} />
+                    <SkillProgress title="Logical Reasoning" value={5.8} />
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -169,7 +138,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-4">
               <AchievementBadge title="Consistent Performer" description="Completed 5 sessions in a row" />
-              <AchievementBadge title="Communication Pro" description="Scored 80+ in communication" />
+              <AchievementBadge title="Communication Pro" description="Scored 8+ in communication" />
               <AchievementBadge title="Quick Thinker" description="Excellent logical reasoning" />
             </CardContent>
           </Card>
@@ -184,14 +153,16 @@ function StatsCard({
   value,
   description,
   icon,
-}: { title: string; value: string; description: string; icon: React.ReactNode }) {
+}: { title: string; value: string | React.ReactNode; description: string; icon: React.ReactNode }) {
   return (
     <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-shadow">
       <CardContent className="p-6">
         <div className="flex justify-between items-start">
           <div>
             <p className="text-sm font-medium text-slate-500">{title}</p>
-            <h3 className="text-2xl font-bold mt-1">{value}</h3>
+            <div className="mt-1">
+              {typeof value === "string" ? <h3 className="text-2xl font-bold">{value}</h3> : value}
+            </div>
             <p className="text-xs text-slate-500 mt-1">{description}</p>
           </div>
           <div className="p-2 bg-slate-100 rounded-full">{icon}</div>
@@ -206,9 +177,9 @@ function SkillProgress({ title, value }: { title: string; value: number }) {
     <div className="space-y-2">
       <div className="flex justify-between items-center">
         <span className="text-sm font-medium">{title}</span>
-        <span className="text-sm font-medium">{value}%</span>
       </div>
-      <Progress value={value} className="h-2" />
+      <StarRating value={value} max={10} readOnly />
+      <p className="text-xs text-slate-500 mt-1">Your current skill level</p>
     </div>
   )
 }

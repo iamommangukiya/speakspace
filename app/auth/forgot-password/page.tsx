@@ -5,14 +5,11 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { getAuth, sendPasswordResetEmail } from "firebase/auth"
-
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Loader2, Mail } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { auth } from "@/lib/firebase" // Ensure this import is correct
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -26,12 +23,10 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
 
     try {
-      // Use Firebase to send a password reset email
-      await sendPasswordResetEmail(auth, email)
-
+      // In a real app, this would be an API call to send a password reset email
+      await new Promise((resolve) => setTimeout(resolve, 1500))
       setIsSubmitted(true)
-    } catch (err: any) {
-      console.error("Failed to send reset email:", err)
+    } catch (err) {
       setError("Failed to send reset email. Please try again.")
     } finally {
       setIsLoading(false)
@@ -67,7 +62,7 @@ export default function ForgotPasswordPage() {
                   type="email"
                   placeholder="name@example.com"
                   required
-                  className="w-full h-11 px-3 py-2"
+                  className="h-11"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}

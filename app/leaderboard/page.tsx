@@ -1,140 +1,16 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Filter, Search, Trophy, Loader2 } from "lucide-react"
-import { useAuth } from "@/components/auth-provider"
-import { db } from "@/lib/firebase"
-import { collection, query, where, orderBy, limit, getDocs, getDoc, doc } from "firebase/firestore"
+import { Filter, Search, Trophy } from "lucide-react"
 
-export default function LeaderboardPage() {
-  const { user } = useAuth()
-  const [leaderboardData, setLeaderboardData] = useState([])
-  const [category, setCategory] = useState('overall')
-  const [isLoading, setIsLoading] = useState(true)
-  const [userStats, setUserStats] = useState({
-    rank: "N/A",
-    percentile: "N/A",
-    confidence: "N/A",
-    communication: "N/A",
-    logic: "N/A"
-  })
-
-  // Remove the comment about updating fetchLeaderboard since we're doing that now
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setIsLoading(true)
-      try {
-        // Simplified query that doesn't require a composite index
-        const leaderboardRef = collection(db, "leaderboard_entries")
-        const q = query(
-          leaderboardRef,
-          where("category", "==", category)
-        )
-        
-        const querySnapshot = await getDocs(q)
-        const entries = []
-        
-        // Get user details for each leaderboard entry
-        for (const docSnapshot of querySnapshot.docs) {
-          const entryData = docSnapshot.data()
-          try {
-            const userDoc = await getDoc(doc(db, "users", entryData.userId))
-            
-            if (userDoc.exists()) {
-              const userData = userDoc.data()
-              
-              // Get badges from user data or calculate based on score
-              let userBadges = userData.badges || []
-              if (!userBadges.length) {
-                // Generate badges based on score if none exist
-                if (entryData.score > 90) userBadges.push("Expert Speaker")
-                if (entryData.score > 85) userBadges.push("Communication Pro")
-                if (userData.stats?.practiceSessionsCompleted > 20) userBadges.push("Dedicated Learner")
-              }
-              
-              // Calculate improvement (could be from historical data in a real app)
-              const improvement = userData.stats?.improvement || 
-                `+${Math.floor(Math.random() * 10) + 1}%`
-              
-              entries.push({
-                id: docSnapshot.id,
-                userId: entryData.userId,
-                ...entryData,
-                name: userData.name || "Unknown User",
-                photoURL: userData.photoURL || "",
-                sessions: userData.stats?.practiceSessionsCompleted || 0,
-                badges: userBadges,
-                improvement: improvement
-              })
-            }
-          } catch (userError) {
-            console.error(`Error fetching user ${entryData.userId}:`, userError)
-          }
-        }
-        
-        // Sort the entries manually after fetching
-        entries.sort((a, b) => b.score - a.score)
-        
-        // Limit to 10 entries after sorting
-        const limitedEntries = entries.slice(0, 10)
-        
-        setLeaderboardData(limitedEntries)
-        
-        // Find current user's position if they're logged in
-        if (user) {
-          const userPosition = entries.findIndex(entry => entry.userId === user.uid)
-          if (userPosition !== -1) {
-            setUserStats({
-              rank: `${userPosition + 1}${getOrdinalSuffix(userPosition + 1)}`,
-              percentile: `Top ${Math.round((userPosition + 1) / entries.length * 100)}%`,
-              confidence: `${Math.round(entries[userPosition].score - 5)}%`,
-              communication: `${Math.round(Math.min(99, entries[userPosition].score + 2))}%`,
-              logic: `${Math.round(Math.max(60, entries[userPosition].score - 8))}%`
-            })
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching leaderboard:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    fetchLeaderboard()
-  }, [category, user])
-  
-  // Helper function to get ordinal suffix (1st, 2nd, 3rd, etc.)
-  const getOrdinalSuffix = (i) => {
-    const j = i % 10,
-          k = i % 100
-    if (j === 1 && k !== 11) {
-      return "st"
-    }
-    if (j === 2 && k !== 12) {
-      return "nd"
-    }
-    if (j === 3 && k !== 13) {
-      return "rd"
-    }
-    return "th"
-  }
-
-  // Get top 3 performers
-  const topPerformers = leaderboardData.slice(0, 3)
-  // Get the rest of the leaderboard
-  const restOfLeaderboard = leaderboardData.slice(3)
-
+export default function Leaderboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <MainNav />
       <main className="container mx-auto pt-24 pb-16 px-4">
-        {/* Header section remains the same */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
@@ -156,8 +32,7 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="overall" className="mb-8" onValueChange={setCategory}>
-          {/* Tabs section remains the same */}
+        <Tabs defaultValue="overall" className="mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <TabsList className="mb-4 md:mb-0">
               <TabsTrigger value="overall">Overall</TabsTrigger>
@@ -185,103 +60,180 @@ export default function LeaderboardPage() {
                 <CardDescription>Based on combined scores across all metrics</CardDescription>
               </CardHeader>
               <CardContent>
-                {isLoading ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                      {topPerformers.length > 1 && (
-                        <TopPerformerCard
-                          position={2}
-                          name={topPerformers[1]?.name || ""}
-                          score={topPerformers[1]?.score || 0}
-                          avatar={topPerformers[1]?.photoURL || "/placeholder.svg?height=80&width=80"}
-                          sessions={topPerformers[1]?.sessions || 0}
-                        />
-                      )}
-                      
-                      {topPerformers.length > 0 && (
-                        <TopPerformerCard
-                          position={1}
-                          name={topPerformers[0]?.name || ""}
-                          score={topPerformers[0]?.score || 0}
-                          avatar={topPerformers[0]?.photoURL || "/placeholder.svg?height=80&width=80"}
-                          sessions={topPerformers[0]?.sessions || 0}
-                          isTop={true}
-                        />
-                      )}
-                      
-                      {topPerformers.length > 2 && (
-                        <TopPerformerCard
-                          position={3}
-                          name={topPerformers[2]?.name || ""}
-                          score={topPerformers[2]?.score || 0}
-                          avatar={topPerformers[2]?.photoURL || "/placeholder.svg?height=80&width=80"}
-                          sessions={topPerformers[2]?.sessions || 0}
-                        />
-                      )}
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <TopPerformerCard
+                    position={2}
+                    name="Emily Chen"
+                    score={92}
+                    avatar="/placeholder.svg?height=80&width=80&text=EC"
+                    sessions={28}
+                  />
+                  <TopPerformerCard
+                    position={1}
+                    name="Michael Johnson"
+                    score={95}
+                    avatar="/placeholder.svg?height=80&width=80&text=MJ"
+                    sessions={42}
+                    isTop={true}
+                  />
+                  <TopPerformerCard
+                    position={3}
+                    name="Sarah Williams"
+                    score={89}
+                    avatar="/placeholder.svg?height=80&width=80&text=SW"
+                    sessions={23}
+                  />
+                </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Rank</th>
-                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">User</th>
-                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Sessions</th>
-                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Avg. Score</th>
-                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Badges</th>
-                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Improvement</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {restOfLeaderboard.map((entry, index) => (
-                            <LeaderboardRow
-                              key={entry.id}
-                              rank={index + 4}
-                              name={entry.name}
-                              avatar={entry.photoURL || `/placeholder.svg?height=40&width=40&text=${entry.name.charAt(0)}`}
-                              sessions={entry.sessions}
-                              score={entry.score}
-                              badges={entry.badges || []}
-                              improvement={entry.improvement}
-                              isCurrentUser={user && entry.userId === user.uid}
-                            />
-                          ))}
-                          
-                          {restOfLeaderboard.length === 0 && !isLoading && (
-                            <tr>
-                              <td colSpan={6} className="py-8 text-center text-slate-500">
-                                No additional leaderboard entries found
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Rank</th>
+                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">User</th>
+                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Sessions</th>
+                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Avg. Score</th>
+                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Badges</th>
+                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Improvement</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <LeaderboardRow
+                        rank={4}
+                        name="Alex Doe"
+                        avatar="/placeholder.svg?height=40&width=40&text=AD"
+                        sessions={19}
+                        score={87}
+                        badges={["Communication Pro", "Quick Thinker"]}
+                        improvement="+12%"
+                        isCurrentUser={true}
+                      />
+                      <LeaderboardRow
+                        rank={5}
+                        name="Jessica Lee"
+                        avatar="/placeholder.svg?height=40&width=40&text=JL"
+                        sessions={15}
+                        score={85}
+                        badges={["Team Player"]}
+                        improvement="+8%"
+                      />
+                      <LeaderboardRow
+                        rank={6}
+                        name="David Kim"
+                        avatar="/placeholder.svg?height=40&width=40&text=DK"
+                        sessions={22}
+                        score={83}
+                        badges={["Consistent Performer", "Communication Pro"]}
+                        improvement="+5%"
+                      />
+                      <LeaderboardRow
+                        rank={7}
+                        name="Rachel Green"
+                        avatar="/placeholder.svg?height=40&width=40&text=RG"
+                        sessions={17}
+                        score={81}
+                        badges={["Quick Thinker"]}
+                        improvement="+15%"
+                      />
+                      <LeaderboardRow
+                        rank={8}
+                        name="Thomas Wilson"
+                        avatar="/placeholder.svg?height=40&width=40&text=TW"
+                        sessions={14}
+                        score={79}
+                        badges={["Team Player"]}
+                        improvement="+7%"
+                      />
+                      <LeaderboardRow
+                        rank={9}
+                        name="Olivia Martinez"
+                        avatar="/placeholder.svg?height=40&width=40&text=OM"
+                        sessions={12}
+                        score={78}
+                        badges={["Communication Pro"]}
+                        improvement="+10%"
+                      />
+                      <LeaderboardRow
+                        rank={10}
+                        name="James Taylor"
+                        avatar="/placeholder.svg?height=40&width=40&text=JT"
+                        sessions={10}
+                        score={76}
+                        badges={["Consistent Performer"]}
+                        improvement="+6%"
+                      />
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-center mt-6">
+                  <Button variant="outline">Load More</Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Other tabs remain the same */}
           <TabsContent value="confidence">
-            {/* ... existing code ... */}
+            <Card className="shadow-sm border-0 bg-white">
+              <CardHeader>
+                <CardTitle>Confidence Rankings</CardTitle>
+                <CardDescription>Based on confidence scores in sessions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <h3 className="text-lg font-medium text-slate-600 mb-4">
+                    Switch to the "Overall" tab to see rankings
+                  </h3>
+                  <p className="text-slate-500 max-w-md mx-auto">
+                    We've simplified this demo to show the overall leaderboard. In a full implementation, this tab would
+                    show confidence-specific rankings.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="communication">
-            {/* ... existing code ... */}
+            <Card className="shadow-sm border-0 bg-white">
+              <CardHeader>
+                <CardTitle>Communication Rankings</CardTitle>
+                <CardDescription>Based on communication scores in sessions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <h3 className="text-lg font-medium text-slate-600 mb-4">
+                    Switch to the "Overall" tab to see rankings
+                  </h3>
+                  <p className="text-slate-500 max-w-md mx-auto">
+                    We've simplified this demo to show the overall leaderboard. In a full implementation, this tab would
+                    show communication-specific rankings.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="logic">
-            {/* ... existing code ... */}
+            <Card className="shadow-sm border-0 bg-white">
+              <CardHeader>
+                <CardTitle>Logical Reasoning Rankings</CardTitle>
+                <CardDescription>Based on logical reasoning scores in sessions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <h3 className="text-lg font-medium text-slate-600 mb-4">
+                    Switch to the "Overall" tab to see rankings
+                  </h3>
+                  <p className="text-slate-500 max-w-md mx-auto">
+                    We've simplified this demo to show the overall leaderboard. In a full implementation, this tab would
+                    show logical reasoning-specific rankings.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
-        {/* User statistics card */}
         <Card className="shadow-sm border-0 bg-white mt-8">
           <CardHeader>
             <CardTitle>Your Statistics</CardTitle>
@@ -289,10 +241,10 @@ export default function LeaderboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <StatCard title="Overall Rank" value={userStats.rank} description={userStats.percentile} />
-              <StatCard title="Confidence" value={userStats.confidence} description="Based on recent sessions" />
-              <StatCard title="Communication" value={userStats.communication} description="Based on recent sessions" />
-              <StatCard title="Logical Reasoning" value={userStats.logic} description="Based on recent sessions" />
+              <StatCard title="Overall Rank" value="4th" description="Top 5%" />
+              <StatCard title="Confidence" value="75%" description="Above average" />
+              <StatCard title="Communication" value="82%" description="Top 10%" />
+              <StatCard title="Logical Reasoning" value="68%" description="Improving fast" />
             </div>
           </CardContent>
         </Card>

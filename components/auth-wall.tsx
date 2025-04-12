@@ -8,23 +8,30 @@ import { useAuth } from "@/components/auth-provider"
 import { Loader2 } from "lucide-react"
 
 export function AuthWall({ children }: { children: React.ReactNode }) {
-  // Keep these for compatibility with other components
   const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
 
-  // Comment out or remove the redirect logic
-  // useEffect(() => {
-  //   if (!isLoading && !isAuthenticated) {
-  //     router.push("/auth/login?redirect=" + encodeURIComponent(window.location.pathname))
-  //   }
-  // }, [isAuthenticated, isLoading, router])
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/auth/login?redirect=" + encodeURIComponent(window.location.pathname))
+    }
+  }, [isAuthenticated, isLoading, router])
 
-  // Skip loading state check
   if (isLoading) {
-    // Return children instead of loading screen
-    return <>{children}</>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-12 w-12 text-blue-600 animate-spin mb-4" />
+          <h2 className="text-xl font-medium text-slate-700">Loading...</h2>
+          <p className="text-slate-500 mt-2">Please wait while we verify your session</p>
+        </div>
+      </div>
+    )
   }
 
-  // Always render children regardless of authentication status
+  if (!isAuthenticated) {
+    return null
+  }
+
   return <>{children}</>
 }

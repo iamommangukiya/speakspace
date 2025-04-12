@@ -1,5 +1,7 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { MainNav } from "@/components/main-nav"
-import { RoleSelector } from "@/components/role-selector"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -7,6 +9,18 @@ import { ArrowLeft, Filter, Search } from "lucide-react"
 import Link from "next/link"
 
 export default function Practice() {
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [showCreateSessionDialog, setShowCreateSessionDialog] = useState(false)
+
+
+  useEffect(() => {
+    // Get the user's preferred role from localStorage
+    const savedRole = localStorage.getItem("speakspace_user_role")
+    if (savedRole) {
+      setUserRole(savedRole)
+    }
+  }, [])
+
   return (
     <div className="min-h-screen bg-slate-50">
       <MainNav />
@@ -187,10 +201,52 @@ export default function Practice() {
           </TabsContent>
         </Tabs>
 
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6">Select Your Role</h2>
-          <RoleSelector />
-        </div>
+        {!userRole && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold mb-6">Select Your Role</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <RoleCard
+                title="Moderator"
+                description="Manage the flow of the discussion, set topics, and ensure timekeeping"
+                icon="M"
+                onSelect={() => {
+                  localStorage.setItem("speakspace_user_role", "moderator")
+                  setUserRole("moderator")
+                }}
+              />
+              <RoleCard
+                title="Participant"
+                description="Engage actively in the discussion or mock interview"
+                icon="P"
+                onSelect={() => {
+                  localStorage.setItem("speakspace_user_role", "participant")
+                  setUserRole("participant")
+                }}
+              />
+              <RoleCard
+                title="Evaluator"
+                description="Observe and provide feedback on participants' performance"
+                icon="E"
+                onSelect={() => {
+                  localStorage.setItem("speakspace_user_role", "evaluator")
+                  setUserRole("evaluator")
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {userRole && (
+          <div className="mt-8 flex justify-center">
+            <Button
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
+              size="lg"
+              asChild
+            >
+              <Link href="/session">Continue as {userRole.charAt(0).toUpperCase() + userRole.slice(1)}</Link>
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   )
@@ -232,6 +288,33 @@ function SessionCard({
         <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm transition-all hover:shadow">
           Join Session
         </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+function RoleCard({
+  title,
+  description,
+  icon,
+  onSelect,
+}: {
+  title: string
+  description: string
+  icon: string
+  onSelect: () => void
+}) {
+  return (
+    <Card
+      className="relative cursor-pointer border-2 border-transparent hover:border-blue-200 hover:shadow-sm transition-all"
+      onClick={onSelect}
+    >
+      <CardContent className="p-6 flex flex-col items-center text-center">
+        <div className="p-3 rounded-full bg-slate-100 mb-4">
+          <span className="text-xl font-bold text-blue-600">{icon}</span>
+        </div>
+        <h3 className="font-bold text-lg mb-2">{title}</h3>
+        <p className="text-sm text-slate-600">{description}</p>
       </CardContent>
     </Card>
   )

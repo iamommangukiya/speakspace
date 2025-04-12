@@ -1,241 +1,133 @@
-"use client";
+"use client"
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { 
-  User, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  GoogleAuthProvider,
-  updateProfile
-} from "firebase/auth";
-import { auth, googleProvider, db, storage } from "@/lib/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import type React from "react"
 
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<User>;
-  signupWithEmail: (email: string, password: string) => Promise<User>; // Updated return type
-  signInWithGoogle: () => Promise<User | null>;
-  signInWithGoogleRedirect: () => Promise<void>;
-  logout: () => Promise<void>;
-  updateUserProfile: (data: { displayName?: string, photoURL?: string }) => Promise<void>;
-  uploadProfilePicture: (file: File) => Promise<string>;
-  error: string | null;
+import { createContext, useContext, useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+
+type User = {
+  id: string
+  name: string
+  email: string
+  avatar?: string
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  login: async () => { throw new Error("Login function not implemented"); },
-  signupWithEmail: async () => { throw new Error("Signup function not implemented"); }, // Updated default
-  signInWithGoogle: async () => { throw new Error("Google sign-in not implemented"); },
-  signInWithGoogleRedirect: async () => {},
-  logout: async () => {},
-  updateUserProfile: async () => {},
-  uploadProfilePicture: async () => { return ""; },
-  error: null,
-});
+type AuthContextType = {
+  user: User | null
+  isLoading: boolean
+  isAuthenticated: boolean
+  login: (email: string, password: string) => Promise<void>
+  register: (name: string, email: string, password: string) => Promise<void>
+  logout: () => void
+}
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+
+  // Check if user is logged in on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsLoading(false);
-    });
-
-    // Check for redirect result
-    const checkRedirectResult = async () => {
+    const checkAuth = async () => {
       try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          setUser(result.user);
-          
-          // Create or update user document in Firestore
-          const userRef = doc(db, "users", result.user.uid);
-          const userDoc = await getDoc(userRef);
-          
-          if (!userDoc.exists()) {
-            await setDoc(userRef, {
-              uid: result.user.uid,
-              email: result.user.email,
-              displayName: result.user.displayName,
-              photoURL: result.user.photoURL,
-              createdAt: new Date()
-            });
-          }
+        // In a real app, this would be an API call to validate the session
+        const storedUser = localStorage.getItem("speakspace_user")
+        if (storedUser) {
+          setUser(JSON.parse(storedUser))
         }
       } catch (error) {
-        console.error("Redirect result error:", error);
+        console.error("Authentication error:", error)
+      } finally {
+        setIsLoading(false)
       }
-    };
-    
-    checkRedirectResult();
+    }
 
-    return () => unsubscribe();
-  }, []);
+    checkAuth()
+  }, [])
 
-  // Existing login function
   const login = async (email: string, password: string) => {
+    setIsLoading(true)
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      setUser(userCredential.user);
-      return userCredential.user;
+      // In a real app, this would be an API call to authenticate
+      // Simulating API call with timeout
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Mock user data
+      const userData: User = {
+        id: "user-123",
+        name: "Alex Doe",
+        email: email,
+        avatar: "/placeholder.svg?height=200&width=200&text=AD",
+      }
+
+      setUser(userData)
+      localStorage.setItem("speakspace_user", JSON.stringify(userData))
+      router.push("/dashboard")
     } catch (error) {
-      console.error("Login error:", error);
-      throw error;
+      console.error("Login error:", error)
+      throw error
+    } finally {
+      setIsLoading(false)
     }
-  };
+  }
 
-  // Existing Google sign-in function with popup
-  const signInWithGoogle = async () => {
+  const register = async (name: string, email: string, password: string) => {
+    setIsLoading(true)
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      setUser(result.user);
-      return result.user;
-    } catch (error: any) {
-      // Check if it's the popup-closed-by-user error
-      if (error.code === 'auth/popup-closed-by-user') {
-        console.log('Sign-in popup was closed before completing authentication');
-        // Don't throw for this specific error - it's a user action, not a failure
-        return null;
+      // In a real app, this would be an API call to register
+      // Simulating API call with timeout
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Mock user data
+      const userData: User = {
+        id: "user-" + Math.floor(Math.random() * 1000),
+        name: name,
+        email: email,
+        avatar: `/placeholder.svg?height=200&width=200&text=${name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")}`,
       }
-      
-      console.error("Google sign-in error:", error);
-      setError(error.message);
-      throw error;
-    }
-  };
 
-  // New Google sign-in function with redirect
-  const signInWithGoogleRedirect = async () => {
-    try {
-      await signInWithRedirect(auth, googleProvider);
-      // The page will redirect to Google and then back to your app
-      // The result will be handled in the useEffect above
-    } catch (error: any) {
-      console.error("Google redirect sign-in error:", error);
-      setError(error.message);
-      throw error;
+      setUser(userData)
+      localStorage.setItem("speakspace_user", JSON.stringify(userData))
+      router.push("/dashboard")
+    } catch (error) {
+      console.error("Registration error:", error)
+      throw error
+    } finally {
+      setIsLoading(false)
     }
-  };
+  }
 
-  const signupWithEmail = async (email: string, password: string) => {
-    setError(null);
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const newUser = userCredential.user;
-      
-      // Create user document in Firestore
-      const userRef = doc(db, "users", newUser.uid);
-      await setDoc(userRef, {
-        uid: newUser.uid,
-        email: newUser.email,
-        createdAt: new Date()
-      });
-      
-      setUser(newUser);
-      return newUser;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
-    }
-  };
-
-  const logout = async () => {
-    setError(null);
-    try {
-      await signOut(auth);
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
-    }
-  };
-
-  // Add update profile function
-  const updateUserProfile = async (data: { displayName?: string, photoURL?: string }) => {
-    if (!user) throw new Error("No user logged in");
-    
-    try {
-      // Update Firebase Auth profile
-      await updateProfile(user, data);
-      
-      // Update Firestore user document
-      const userRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userRef);
-      
-      if (userDoc.exists()) {
-        await setDoc(userRef, { ...userDoc.data(), ...data }, { merge: true });
-      } else {
-        await setDoc(userRef, {
-          uid: user.uid,
-          email: user.email,
-          ...data
-        });
-      }
-      
-      // Force refresh the user object
-      setUser({ ...user });
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
-      setError(error.message);
-      throw error;
-    }
-  };
-
-  // Add profile picture upload function
-  const uploadProfilePicture = async (file: File) => {
-    if (!user) throw new Error("No user logged in");
-    
-    try {
-      // Create a reference to the user's profile picture in Firebase Storage
-      const storageRef = ref(storage, `profile_pictures/${user.uid}`);
-      
-      // Upload the file
-      await uploadBytes(storageRef, file);
-      
-      // Get the download URL
-      const downloadURL = await getDownloadURL(storageRef);
-      
-      return downloadURL;
-    } catch (error: any) {
-      console.error("Error uploading profile picture:", error);
-      setError(error.message);
-      throw error;
-    }
-  };
+  const logout = () => {
+    setUser(null)
+    localStorage.removeItem("speakspace_user")
+    router.push("/")
+  }
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
         isLoading,
+        isAuthenticated: !!user,
         login,
-        signInWithGoogle,
-        signInWithGoogleRedirect, // Add the new method to the context
-        signupWithEmail,
+        register,
         logout,
-        updateUserProfile,
-        uploadProfilePicture,
-        error,
       }}
     >
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
+}

@@ -1,8 +1,0 @@
-[
-    {
-      "origin": ["http://localhost:3000"], // Replace with your application's origin
-      "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Add the necessary HTTP methods
-      "maxAgeSeconds": 3600, // Optional: cache response for an hour
-      "responseHeaders": ["Content-Type", "Authorization"] // Optional: Add any necessary headers
-    }
-  ]
