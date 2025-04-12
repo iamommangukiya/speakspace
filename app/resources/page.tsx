@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react"
+import { useEffect, useState } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
 import type React from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
@@ -109,12 +112,45 @@ const RecommendedResourceCard: React.FC<RecommendedResourceCardProps> = ({ title
 export default function ResourcesPage() {
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    fetchResources();
+  }, [selectedCategory]);
 
-  // Add error boundary
+  const fetchResources = async () => {
+    try {
+      setLoading(true);
+      let resourcesQuery = collection(db, 'resources');
+      
+      if (selectedCategory !== 'all') {
+        resourcesQuery = query(resourcesQuery, where('category', '==', selectedCategory));
+      }
+      
+      const querySnapshot = await getDocs(resourcesQuery);
+      const resourcesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setResources(resourcesData);
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter resources based on search query
+  const filteredResources = resources.filter(resource => 
+    resource.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    resource.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -138,24 +174,22 @@ export default function ResourcesPage() {
               <input
                 type="text"
                 placeholder="Search resources..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 pr-4 py-2 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <Button variant="outline" className="flex items-center">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="all" className="mb-8">
+        <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
           <TabsList className="mb-6">
             <TabsTrigger value="all">All Resources</TabsTrigger>
             <TabsTrigger value="interview">Interview Prep</TabsTrigger>
             <TabsTrigger value="gd">Group Discussion</TabsTrigger>
             <TabsTrigger value="resume">Resume Building</TabsTrigger>
           </TabsList>
-
+    
           <TabsContent value="all">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <FeaturedResourceCard
@@ -180,7 +214,7 @@ export default function ResourcesPage() {
                 tags={["Resume", "Career", "Job Search"]}
               />
             </div>
-
+    
             <h2 className="text-2xl font-bold mb-6">Popular Resources</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
               <ResourceCard
@@ -226,7 +260,7 @@ export default function ResourcesPage() {
                 tags={["Interview", "Practice"]}
               />
             </div>
-
+    
             <h2 className="text-2xl font-bold mb-6">Latest Resources</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <ResourceCard
@@ -255,7 +289,7 @@ export default function ResourcesPage() {
               />
             </div>
           </TabsContent>
-
+    
           <TabsContent value="interview">
             <Card className="shadow-sm border-0 bg-white">
               <CardHeader>
@@ -273,7 +307,7 @@ export default function ResourcesPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
+    
           <TabsContent value="gd">
             <Card className="shadow-sm border-0 bg-white">
               <CardHeader>
@@ -291,7 +325,7 @@ export default function ResourcesPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
+    
           <TabsContent value="resume">
             <Card className="shadow-sm border-0 bg-white">
               <CardHeader>
@@ -329,5 +363,5 @@ export default function ResourcesPage() {
         </Card>
       </main>
     </div>
-  )
+  );
 }

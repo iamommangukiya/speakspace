@@ -175,3 +175,57 @@ export const seedLeaderboardData = async () => {
     return { success: false, message: `Error: ${error?.message || 'Unknown error occurred'}` };
   }
 };
+
+// Add resources data seeding
+const seedResourcesData = async () => {
+  try {
+    const resources = [
+      {
+        id: 'res1',
+        title: 'Technical Interview Mastery Guide',
+        description: 'Complete guide covering data structures, algorithms, and system design concepts.',
+        type: 'Guide',
+        category: 'interview',
+        icon: 'FileText',
+        tags: ['Technical', 'Interview', 'Algorithms'],
+        url: 'https://example.com/tech-interview',
+        views: 1200,
+        rating: 4.8
+      },
+      // Add 49 more similar entries with different titles, descriptions, and categories
+    ];
+
+    // Add to Firestore
+    for (const resource of resources) {
+      await addDoc(collection(db, 'resources'), {
+        ...resource,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+      console.log(`Added resource: ${resource.title}`);
+    }
+
+    return { success: true, message: 'Resources data seeded successfully' };
+  } catch (error) {
+    console.error('Error seeding resources:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+// Modify existing seedLeaderboardData to include resources
+export const seedLeaderboardData = async () => {
+  try {
+    // Existing seeding code...
+
+    // Add resources seeding
+    const resourcesResult = await seedResourcesData();
+    if (!resourcesResult.success) {
+      throw new Error(resourcesResult.message);
+    }
+
+    return { success: true, message: 'All data seeded successfully' };
+  } catch (error) {
+    console.error('Error in seed operation:', error);
+    return { success: false, message: error.message };
+  }
+};
