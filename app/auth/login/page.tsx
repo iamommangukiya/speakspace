@@ -76,7 +76,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="name@example.com"
                 required
-                className="h-11"
+                className="w-full h-11 px-3 py-2"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
@@ -93,7 +93,7 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 required
-                className="h-11"
+                className="w-full h-11 px-3 py-2"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}

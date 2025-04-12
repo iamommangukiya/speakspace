@@ -13,31 +13,35 @@ import { db } from "@/lib/firebase"
 import { doc, getDoc } from "firebase/firestore"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/auth-provider" // Import useAuth
 
-export default function Dashboard({ userId }: { userId: string }) {
+export default function Dashboard() {
+  const { user, isLoading: authLoading } = useAuth() // Use useAuth to get user
   const [userName, setUserName] = useState<string | null>(null)
   const [sessionCode, setSessionCode] = useState("")
   const router = useRouter()
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!user) return
+      
       try {
-        if (!userId) return;
+        // Get user document from Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid))
         
-        const userDoc = await getDoc(doc(db, "users", userId));
         if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setUserName(userData.name || userData.displayName || "User");
-
-          console.log(userData)
+          const userData = userDoc.data()
+          setUserName(user.displayName || userData.name || "User")
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Error fetching user data:", error)
       }
-    };
+    }
 
-    fetchUserData();
-  }, []);
+    if (!authLoading) {
+      fetchUserData()
+    }
+  }, [user, authLoading]) // Added user and authLoading as dependencies
 
   const handleJoinSession = (e: React.FormEvent) => {
     e.preventDefault()
