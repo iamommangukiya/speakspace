@@ -12,7 +12,7 @@ export default function JoinPage() {
   const router = useRouter()
   const { user } = useAuth()
   const [error, setError] = useState("")
-  const meetingId = searchParams.get("id")
+  const meetingId = searchParams?.get("id")
 
   const joinMeeting = async () => {
     if (!meetingId || !user) return

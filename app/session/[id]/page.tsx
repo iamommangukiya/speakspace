@@ -11,7 +11,7 @@ export default function SessionPage() {
   const params = useParams()
   const { user } = useAuth()
   const [isHost, setIsHost] = useState(false)
-  const sessionId = params.id as string
+  const sessionId = params?.id as string
 
   useEffect(() => {
     const checkHostStatus = async () => {

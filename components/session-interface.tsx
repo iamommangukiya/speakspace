@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { VideoCall } from "@/components/video-call"
+import { ChatRoom } from "./chat-room"
 import { SessionChat } from "@/components/session-chat"
 import { useAuth } from "@/components/auth-provider"
+import { rtdb } from "@/lib/firebase"
+import { ref, onValue } from "firebase/database"
 
 export interface SessionInterfaceProps {
   sessionId: string
@@ -17,110 +19,56 @@ export interface SessionInterfaceProps {
   onToggleChat: () => void
 }
 
-export function SessionInterface({ sessionId, userId, userName, isHost, onEndCall, onToggleChat }: SessionInterfaceProps) {
+export function SessionInterface({ sessionId, userId, userName, isHost, onEndCall }: SessionInterfaceProps) {
   const { user } = useAuth()
-  const [showChat, setShowChat] = useState(true)
-  const [activeTab, setActiveTab] = useState("session")
-  const [participantCount, setParticipantCount] = useState(3) // Default to 3 participants for testing
+  const [participants, setParticipants] = useState<{[key: string]: string}>({})
 
-  // Mock session data - in a real app, you would fetch this from your backend
-  const sessionData = {
-    id: "session123",
-    title: "Technical Interview Practice",
-    description: "Practice for software engineering roles with mock interviews focusing on algorithms and system design.",
-    isHost: true,
-    participants: Array.from({ length: participantCount }, (_, i) => `user${i+1}`)
-  }
+  useEffect(() => {
+    const participantsRef = ref(rtdb, `rooms/${sessionId}/participants`)
+    const unsubscribe = onValue(participantsRef, (snapshot) => {
+      const data = snapshot.val()
+      if (data) {
+        setParticipants(data)
+      }
+    })
 
-  const handleEndCall = () => {
-    // In a real app, you would handle ending the call and redirecting
-    window.location.href = "/dashboard"
-  }
-
-  const toggleChat = () => {
-    setShowChat(!showChat)
-  }
+    return () => unsubscribe()
+  }, [sessionId])
 
   if (!user) {
     return <div>Loading...</div>
   }
 
-  // Add buttons to test different participant counts
-  const addParticipant = () => {
-    setParticipantCount(prev => Math.min(prev + 1, 8)); // Max 8 participants for testing
-  };
-
-  const removeParticipant = () => {
-    setParticipantCount(prev => Math.max(prev - 1, 0)); // Min 0 participants
-  };
+  const sessionData = {
+    id: sessionId,
+    title: "Technical Interview Practice",
+    description: "Practice for software engineering roles with mock interviews focusing on algorithms and system design.",
+    isHost,
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
-      <div className={`lg:col-span-${showChat ? '2' : '3'} h-full`}>
-        <Card className="shadow-sm border-0 bg-white h-full flex flex-col">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>{sessionData.title}</CardTitle>
-                <CardDescription>
-                  Session in progress • {participantCount + 1} participants
-                </CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={removeParticipant}>
-                  - Participant
-                </Button>
-                <Button size="sm" variant="outline" onClick={addParticipant}>
-                  + Participant
-                </Button>
-              </div>
+    <div className="h-[calc(100vh-180px)]">
+      <Card className="shadow-sm border-0 bg-white h-full flex flex-col">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>{sessionData.title}</CardTitle>
+              <CardDescription>
+                Session in progress • {Object.keys(participants).length} participants
+              </CardDescription>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 p-0">
-            <VideoCall 
-              sessionId={sessionData.id}
-              userId={user.uid}
-              userName={user.displayName || "User"}
-              isHost={sessionData.isHost}
-              onEndCall={handleEndCall}
-              onToggleChat={toggleChat}
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      {showChat && (
-        <div className="h-full">
-          <Tabs defaultValue="chat" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="chat" onClick={() => setActiveTab("chat")}>Chat</TabsTrigger>
-              <TabsTrigger value="notes" onClick={() => setActiveTab("notes")}>Notes</TabsTrigger>
-            </TabsList>
-            <TabsContent value="chat" className="flex-1 mt-0 p-0">
-              <SessionChat 
-                sessionId={sessionData.id}
-                userId={user.uid}
-                userName={user.displayName || "User"}
-                userAvatar={user.photoURL || undefined}
-              />
-            </TabsContent>
-            <TabsContent value="notes" className="flex-1 mt-0">
-              <Card className="shadow-sm border-0 bg-white h-full">
-                <CardHeader className="pb-2">
-                  <CardTitle>Session Notes</CardTitle>
-                  <CardDescription>Take notes during your session</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <textarea 
-                    className="w-full h-[calc(100vh-350px)] p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Type your notes here..."
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-      )}
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1 p-0">
+          <ChatRoom 
+            sessionId={sessionData.id}
+            userId={user?.uid || userId}
+            userName={user?.displayName || userName}
+            isHost={sessionData.isHost}
+            onEndSession={onEndCall}
+          />
+        </CardContent>
+      </Card>
     </div>
   )
 }
