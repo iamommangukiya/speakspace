@@ -11,6 +11,7 @@ import { BookOpen, Download, FileText, Filter, Search, Video } from "lucide-reac
 import ResumeUpload from "@/components/ResumeUpload"
 import { useAuth } from "@/components/auth-provider"
 
+// Define interfaces for our data structures
 interface ResourceCardProps {
   title: string;
   description: string;
@@ -28,8 +29,27 @@ interface RecommendedResourceCardProps {
   reason: string;
 }
 
-// Move these component definitions to the top
+// Define resource data interface
+interface ResourceData {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  tags: string[];
+  isNew?: boolean;
+  isFeatured?: boolean;
+}
+
+interface RecommendedResourceData {
+  id: string;
+  title: string;
+  description: string;
+  reason: string;
+}
+
+// Component definitions
 const FeaturedResourceCard: React.FC<FeaturedResourceCardProps> = ({ title, description, type, icon, tags }) => (
+  // Component implementation remains the same
   <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-shadow">
     <CardContent className="p-6">
       <div className="flex items-start gap-4 mb-4">
@@ -57,6 +77,7 @@ const FeaturedResourceCard: React.FC<FeaturedResourceCardProps> = ({ title, desc
 );
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ title, description, type, icon, tags, isNew = false }) => (
+  // Component implementation remains the same
   <Card className="shadow-sm border-0 bg-white hover:shadow-md transition-shadow">
     <CardContent className="p-6">
       <div className="flex justify-between items-start mb-3">
@@ -89,6 +110,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ title, description, type, i
 )
 
 const RecommendedResourceCard: React.FC<RecommendedResourceCardProps> = ({ title, description, reason }) => (
+  // Component implementation remains the same
   <div className="flex p-4 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
     <div className="mr-4 p-3 bg-blue-100 rounded-full h-fit">
       <BookOpen className="h-5 w-5 text-blue-600" />
@@ -106,9 +128,189 @@ const RecommendedResourceCard: React.FC<RecommendedResourceCardProps> = ({ title
   </div>
 );
 
+// Helper function to get the appropriate icon based on resource type
+const getIconForType = (type: string) => {
+  switch (type.toLowerCase()) {
+    case 'video':
+    case 'video course':
+      return <Video className="h-6 w-6 text-indigo-600" />;
+    case 'guide':
+    case 'template':
+    case 'list':
+    case 'practice':
+    default:
+      return <FileText className="h-6 w-6 text-blue-600" />;
+  }
+};
+
 export default function ResourcesPage() {
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
+  
+  // State for resources data
+  const [featuredResources, setFeaturedResources] = useState<ResourceData[]>([]);
+  const [popularResources, setPopularResources] = useState<ResourceData[]>([]);
+  const [latestResources, setLatestResources] = useState<ResourceData[]>([]);
+  const [recommendedResources, setRecommendedResources] = useState<RecommendedResourceData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch resources data
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        setIsLoading(true);
+        
+        // In a real application, these would be API calls
+        // For demo purposes, we're simulating API responses
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Mock data - in a real app, this would come from your API
+        const featuredData = [
+          {
+            id: '1',
+            title: 'Master the Technical Interview',
+            description: 'A comprehensive guide to acing technical interviews with practice questions and strategies.',
+            type: 'Guide',
+            tags: ['Technical', 'Interview', 'Preparation'],
+            isFeatured: true
+          },
+          {
+            id: '2',
+            title: 'Effective Group Discussion Techniques',
+            description: 'Learn how to contribute meaningfully in group discussions and stand out from the crowd.',
+            type: 'Video Course',
+            tags: ['Group Discussion', 'Communication', 'Leadership'],
+            isFeatured: true
+          },
+          {
+            id: '3',
+            title: 'Resume That Gets You Hired',
+            description: 'Templates and tips for creating a resume that highlights your strengths and catches recruiters\' attention.',
+            type: 'Template',
+            tags: ['Resume', 'Career', 'Job Search'],
+            isFeatured: true
+          }
+        ];
+        
+        const popularData = [
+          {
+            id: '4',
+            title: 'Behavioral Interview Questions',
+            description: '50+ common behavioral questions with example answers.',
+            type: 'Guide',
+            tags: ['Interview', 'Behavioral']
+          },
+          {
+            id: '5',
+            title: 'System Design Interview Prep',
+            description: 'How to approach and solve system design problems.',
+            type: 'Guide',
+            tags: ['Technical', 'System Design']
+          },
+          {
+            id: '6',
+            title: 'Group Discussion Topics 2023',
+            description: 'Current affairs and trending topics for GD practice.',
+            type: 'List',
+            tags: ['Group Discussion', 'Current Affairs']
+          },
+          {
+            id: '7',
+            title: 'Body Language in Interviews',
+            description: 'Master non-verbal communication for better impressions.',
+            type: 'Video',
+            tags: ['Interview', 'Body Language']
+          },
+          {
+            id: '8',
+            title: 'Resume Templates for Tech Roles',
+            description: 'ATS-friendly templates for software engineers and data scientists.',
+            type: 'Template',
+            tags: ['Resume', 'Technical']
+          },
+          {
+            id: '9',
+            title: 'Mock Interview Questions',
+            description: 'Practice with these real interview questions from top companies.',
+            type: 'Practice',
+            tags: ['Interview', 'Practice']
+          }
+        ];
+        
+        const latestData = [
+          {
+            id: '10',
+            title: 'AI in Technical Interviews',
+            description: 'How to prepare for AI-related questions in tech interviews.',
+            type: 'Guide',
+            tags: ['Technical', 'AI', 'New'],
+            isNew: true
+          },
+          {
+            id: '11',
+            title: 'Remote Interview Success',
+            description: 'Tips for making a great impression in virtual interviews.',
+            type: 'Video',
+            tags: ['Interview', 'Remote', 'New'],
+            isNew: true
+          },
+          {
+            id: '12',
+            title: 'Salary Negotiation Tactics',
+            description: 'How to negotiate your compensation package effectively.',
+            type: 'Guide',
+            tags: ['Career', 'Negotiation', 'New'],
+            isNew: true
+          }
+        ];
+        
+        const recommendedData = [
+          {
+            id: '13',
+            title: 'Improving Logical Reasoning',
+            description: 'Techniques to enhance your problem-solving and critical thinking skills.',
+            reason: 'Based on your recent logical reasoning scores'
+          },
+          {
+            id: '14',
+            title: 'Technical Interview Questions for Software Engineers',
+            description: 'Common coding and system design questions with detailed solutions.',
+            reason: 'Matches your profile and career interests'
+          }
+        ];
+        
+        setFeaturedResources(featuredData);
+        setPopularResources(popularData);
+        setLatestResources(latestData);
+        setRecommendedResources(recommendedData);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error fetching resources:', err);
+        setError('Failed to load resources. Please try again later.');
+        setIsLoading(false);
+      }
+    };
+
+    if (mounted) {
+      fetchResources();
+    }
+  }, [mounted]);
+
+  // Filter resources based on search query
+  const filterResources = (resources: ResourceData[]) => {
+    if (!searchQuery) return resources;
+    
+    return resources.filter(resource => 
+      resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      resource.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      resource.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -139,6 +341,8 @@ export default function ResourcesPage() {
                 type="text"
                 placeholder="Search resources..."
                 className="pl-10 pr-4 py-2 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Button variant="outline" className="flex items-center">
@@ -148,7 +352,7 @@ export default function ResourcesPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="all" className="mb-8">
+        <Tabs defaultValue="all" className="mb-8" onValueChange={setActiveFilter}>
           <TabsList className="mb-6">
             <TabsTrigger value="all">All Resources</TabsTrigger>
             <TabsTrigger value="interview">Interview Prep</TabsTrigger>
@@ -157,103 +361,62 @@ export default function ResourcesPage() {
           </TabsList>
 
           <TabsContent value="all">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <FeaturedResourceCard
-                title="Master the Technical Interview"
-                description="A comprehensive guide to acing technical interviews with practice questions and strategies."
-                type="Guide"
-                icon={<FileText className="h-6 w-6 text-blue-600" />}
-                tags={["Technical", "Interview", "Preparation"]}
-              />
-              <FeaturedResourceCard
-                title="Effective Group Discussion Techniques"
-                description="Learn how to contribute meaningfully in group discussions and stand out from the crowd."
-                type="Video Course"
-                icon={<Video className="h-6 w-6 text-indigo-600" />}
-                tags={["Group Discussion", "Communication", "Leadership"]}
-              />
-              <FeaturedResourceCard
-                title="Resume That Gets You Hired"
-                description="Templates and tips for creating a resume that highlights your strengths and catches recruiters' attention."
-                type="Template"
-                icon={<FileText className="h-6 w-6 text-green-600" />}
-                tags={["Resume", "Career", "Job Search"]}
-              />
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-500">{error}</p>
+                <Button onClick={() => window.location.reload()} className="mt-4">
+                  Try Again
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  {filterResources(featuredResources).map(resource => (
+                    <FeaturedResourceCard
+                      key={resource.id}
+                      title={resource.title}
+                      description={resource.description}
+                      type={resource.type}
+                      icon={getIconForType(resource.type)}
+                      tags={resource.tags}
+                    />
+                  ))}
+                </div>
 
-            <h2 className="text-2xl font-bold mb-6">Popular Resources</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-              <ResourceCard
-                title="Behavioral Interview Questions"
-                description="50+ common behavioral questions with example answers."
-                type="Guide"
-                icon={<FileText className="h-5 w-5" />}
-                tags={["Interview", "Behavioral"]}
-              />
-              <ResourceCard
-                title="System Design Interview Prep"
-                description="How to approach and solve system design problems."
-                type="Guide"
-                icon={<FileText className="h-5 w-5" />}
-                tags={["Technical", "System Design"]}
-              />
-              <ResourceCard
-                title="Group Discussion Topics 2023"
-                description="Current affairs and trending topics for GD practice."
-                type="List"
-                icon={<FileText className="h-5 w-5" />}
-                tags={["Group Discussion", "Current Affairs"]}
-              />
-              <ResourceCard
-                title="Body Language in Interviews"
-                description="Master non-verbal communication for better impressions."
-                type="Video"
-                icon={<Video className="h-5 w-5" />}
-                tags={["Interview", "Body Language"]}
-              />
-              <ResourceCard
-                title="Resume Templates for Tech Roles"
-                description="ATS-friendly templates for software engineers and data scientists."
-                type="Template"
-                icon={<FileText className="h-5 w-5" />}
-                tags={["Resume", "Technical"]}
-              />
-              <ResourceCard
-                title="Mock Interview Questions"
-                description="Practice with these real interview questions from top companies."
-                type="Practice"
-                icon={<FileText className="h-5 w-5" />}
-                tags={["Interview", "Practice"]}
-              />
-            </div>
+                <h2 className="text-2xl font-bold mb-6">Popular Resources</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                  {filterResources(popularResources).map(resource => (
+                    <ResourceCard
+                      key={resource.id}
+                      title={resource.title}
+                      description={resource.description}
+                      type={resource.type}
+                      icon={getIconForType(resource.type)}
+                      tags={resource.tags}
+                    />
+                  ))}
+                </div>
 
-            <h2 className="text-2xl font-bold mb-6">Latest Resources</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <ResourceCard
-                title="AI in Technical Interviews"
-                description="How to prepare for AI-related questions in tech interviews."
-                type="Guide"
-                icon={<FileText className="h-5 w-5" />}
-                tags={["Technical", "AI", "New"]}
-                isNew={true}
-              />
-              <ResourceCard
-                title="Remote Interview Success"
-                description="Tips for making a great impression in virtual interviews."
-                type="Video"
-                icon={<Video className="h-5 w-5" />}
-                tags={["Interview", "Remote", "New"]}
-                isNew={true}
-              />
-              <ResourceCard
-                title="Salary Negotiation Tactics"
-                description="How to negotiate your compensation package effectively."
-                type="Guide"
-                icon={<FileText className="h-5 w-5" />}
-                tags={["Career", "Negotiation", "New"]}
-                isNew={true}
-              />
-            </div>
+                <h2 className="text-2xl font-bold mb-6">Latest Resources</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filterResources(latestResources).map(resource => (
+                    <ResourceCard
+                      key={resource.id}
+                      title={resource.title}
+                      description={resource.description}
+                      type={resource.type}
+                      icon={getIconForType(resource.type)}
+                      tags={resource.tags}
+                      isNew={resource.isNew}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="interview">
@@ -263,13 +426,32 @@ export default function ResourcesPage() {
                 <CardDescription>Guides, practice questions, and tips for acing your interviews</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <h3 className="text-lg font-medium text-slate-600 mb-4">Switch to the "All Resources" tab</h3>
-                  <p className="text-slate-500 max-w-md mx-auto">
-                    We've simplified this demo to show all resources in one tab. In a full implementation, this tab
-                    would show interview-specific resources.
-                  </p>
-                </div>
+                {isLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filterResources([...featuredResources, ...popularResources, ...latestResources])
+                      .filter(resource => 
+                        resource.tags.some(tag => 
+                          tag.toLowerCase().includes('interview') || 
+                          tag.toLowerCase().includes('technical')
+                        )
+                      )
+                      .map(resource => (
+                        <ResourceCard
+                          key={resource.id}
+                          title={resource.title}
+                          description={resource.description}
+                          type={resource.type}
+                          icon={getIconForType(resource.type)}
+                          tags={resource.tags}
+                          isNew={resource.isNew}
+                        />
+                      ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -281,13 +463,32 @@ export default function ResourcesPage() {
                 <CardDescription>Materials to help you excel in group discussions</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <h3 className="text-lg font-medium text-slate-600 mb-4">Switch to the "All Resources" tab</h3>
-                  <p className="text-slate-500 max-w-md mx-auto">
-                    We've simplified this demo to show all resources in one tab. In a full implementation, this tab
-                    would show group discussion-specific resources.
-                  </p>
-                </div>
+                {isLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filterResources([...featuredResources, ...popularResources, ...latestResources])
+                      .filter(resource => 
+                        resource.tags.some(tag => 
+                          tag.toLowerCase().includes('group discussion') || 
+                          tag.toLowerCase().includes('communication')
+                        )
+                      )
+                      .map(resource => (
+                        <ResourceCard
+                          key={resource.id}
+                          title={resource.title}
+                          description={resource.description}
+                          type={resource.type}
+                          icon={getIconForType(resource.type)}
+                          tags={resource.tags}
+                          isNew={resource.isNew}
+                        />
+                      ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -299,9 +500,30 @@ export default function ResourcesPage() {
                 <CardDescription>Templates and guides for creating an effective resume</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResumeUpload>
-                  
-                </ResumeUpload>
+                <ResumeUpload />
+                
+                {!isLoading && (
+                  <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filterResources([...featuredResources, ...popularResources, ...latestResources])
+                      .filter(resource => 
+                        resource.tags.some(tag => 
+                          tag.toLowerCase().includes('resume') || 
+                          tag.toLowerCase().includes('cv')
+                        )
+                      )
+                      .map(resource => (
+                        <ResourceCard
+                          key={resource.id}
+                          title={resource.title}
+                          description={resource.description}
+                          type={resource.type}
+                          icon={getIconForType(resource.type)}
+                          tags={resource.tags}
+                          isNew={resource.isNew}
+                        />
+                      ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -313,18 +535,22 @@ export default function ResourcesPage() {
             <CardDescription>Based on your recent sessions and performance</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <RecommendedResourceCard
-                title="Improving Logical Reasoning"
-                description="Techniques to enhance your problem-solving and critical thinking skills."
-                reason="Based on your recent logical reasoning scores"
-              />
-              <RecommendedResourceCard
-                title="Technical Interview Questions for Software Engineers"
-                description="Common coding and system design questions with detailed solutions."
-                reason="Matches your profile and career interests"
-              />
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {recommendedResources.map(resource => (
+                  <RecommendedResourceCard
+                    key={resource.id}
+                    title={resource.title}
+                    description={resource.description}
+                    reason={resource.reason}
+                  />
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
