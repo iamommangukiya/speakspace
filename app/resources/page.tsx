@@ -1,22 +1,94 @@
-import type React from "react"
+import React from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Download, FileText, Filter, Search, Video } from "lucide-react"
+import { db } from "@/lib/firebase"
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Plus } from "lucide-react"
 
 export default function Resources() {
+  const [open, setOpen] = React.useState(false)
+  const [title, setTitle] = React.useState('')
+  const [description, setDescription] = React.useState('')
+  const [type, setType] = React.useState('')
+  const [tags, setTags] = React.useState('')
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const docRef = await addDoc(collection(db, 'resources'), {
+        title,
+        description,
+        type,
+        tags: tags.split(',').map(tag => tag.trim()),
+        createdAt: serverTimestamp()
+      })
+      setOpen(false)
+      setTitle('')
+      setDescription('')
+      setType('')
+      setTags('')
+    } catch (error) {
+      console.error('Error adding document: ', error)
+    }
+  }
+  
   return (
     <div className="min-h-screen bg-slate-50">
       <MainNav />
       <main className="container mx-auto pt-24 pb-16 px-4">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Add New Resource</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="title" className="text-right">
+                  Title
+                </Label>
+                <Input id="title" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Input id="description" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="type" className="text-right">
+                  Type
+                </Label>
+                <Input id="type" className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="tags" className="text-right">
+                  Tags (comma separated)
+                </Label>
+                <Input id="tags" className="col-span-3" />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Resources</h1>
             <p className="text-slate-500 mt-1">Guides, tips, and materials to help you improve</p>
           </div>
           <div className="mt-4 md:mt-0 flex gap-3">
+            <DialogTrigger asChild>
+              <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Resource
+              </Button>
+            </DialogTrigger>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
