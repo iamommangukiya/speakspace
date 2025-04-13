@@ -160,22 +160,57 @@ setShowEditDialog(true);
     }
   }
 
-  // Handle joining a session (checks permissions)
-  const handleJoinSession = (session: any) => {
+  // Handle joining a session (checks permissions and creates/joins chat room)
+  const handleJoinSession = async (session: Session) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please login to join a session",
+        variant: "destructive"
+      })
+      return
+    }
+
     setSelectedSession(session)
     setShowPermissionDialog(true)
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(() => setMicPermission(true))
-      .catch(() => setMicPermission(false))
-      
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(() => setVideoPermission(true))
-      .catch(() => setVideoPermission(false))
+
+    try {
+      // Check media permissions
+      const [audioPermission, videoPermission] = await Promise.all([
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(() => true)
+          .catch(() => false),
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(() => true)
+          .catch(() => false)
+      ])
+
+      setMicPermission(audioPermission)
+      setVideoPermission(videoPermission)
+
+      // Update session participants
+      if (session.id && !session.participants.includes(user.id)) {
+        const sessionRef = doc(db, "sessions", session.id)
+        await updateDoc(sessionRef, {
+          participants: [...session.participants, user.id]
+        })
+      }
+    } catch (error) {
+      console.error("Error joining session:", error)
+      toast({
+        title: "Error",
+        description: "Failed to join session. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleContinueToSession = () => {
+    if (!selectedSession) return
+    
     setShowPermissionDialog(false)
-    window.location.href = "/session"
+    // Navigate to session with session ID and user role
+    window.location.href = `/session?id=${selectedSession.id}&role=${userRole}`
   }
 
   useEffect(() => {
@@ -443,10 +478,7 @@ setShowEditDialog(true);
                         maxParticipants={session.maxParticipants}
                         tags={session.tags}
                         status={session.status}
-                        onJoin={() => handleJoinSession({
-                          title: session.title,
-                          rules: "Default session rules",
-                        })}
+                        onJoin={() => handleJoinSession(session)}
                       />
                     ))
                   )}

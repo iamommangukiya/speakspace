@@ -35,33 +35,42 @@ export default function CreateMeeting() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user?.id || !date) return
+    e.preventDefault();
+    if (!user?.id || !date) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      const meetingId = `gd_${Date.now()}`
-      await setDoc(doc(db, "meetings", meetingId), {
-        id: meetingId,
-        type: "group_discussion",
-        topic: formData.topic,
-        description: formData.description,
-        maxParticipants: parseInt(formData.maxParticipants),
-        rules: formData.rules,
-        scheduledAt: date,
-        createdBy: user.id,
-        createdAt: serverTimestamp(),
-        status: "scheduled",
-        participants: [user.id],
-      })
+        const meetingId = `gd_${Date.now()}`;
+        await setDoc(doc(db, "meetings", meetingId), {
+            id: meetingId,
+            type: "group_discussion",
+            topic: formData.topic,
+            description: formData.description,
+            maxParticipants: parseInt(formData.maxParticipants),
+            rules: formData.rules,
+            scheduledAt: date,
+            createdBy: user.id,
+            createdAt: serverTimestamp(),
+            status: "scheduled",
+            participants: [user.id],
+        });
 
-      router.push("/live-sessions")
+        // Create a chat room for the group discussion
+        const chatRoomId = `chat_${meetingId}`;
+        await setDoc(doc(db, "chatRooms", chatRoomId), {
+            id: chatRoomId,
+            meetingId: meetingId,
+            createdAt: serverTimestamp(),
+            participants: [user.id],
+        });
+
+        router.push("/live-sessions");
     } catch (error) {
-      console.error("Error creating meeting:", error)
+        console.error("Error creating meeting:", error);
     } finally {
-      setIsSubmitting(false)
+        setIsSubmitting(false);
     }
-  }
+};
 
   return (
     <div className="min-h-screen bg-slate-50">

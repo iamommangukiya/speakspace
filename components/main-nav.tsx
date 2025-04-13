@@ -31,6 +31,11 @@ const navItems = [
     icon: BarChart3,
   },
   {
+    name: "Resources",
+    href: "/Resources",
+    icon: Calendar,
+  },
+  {
     name: "Resume",
     href: "/resume",
     icon: BookOpen,
