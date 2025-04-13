@@ -53,7 +53,7 @@ export default function Dashboard() {
                 Start Practice
               </Link>
             </Button>
-            <Button
+            {/* <Button
               className="mt-4 md:mt-0 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 shadow-md transition-all hover:shadow-lg"
               size="lg"
               asChild
@@ -62,7 +62,7 @@ export default function Dashboard() {
                 <Users className="mr-2 h-5 w-5" />
                 Create GD
               </Link>
-            </Button>
+            </Button> */}
           </div>
         </div>
 
