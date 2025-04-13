@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth-provider"
 import { collection, addDoc, getDocs, query } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast"
 
 // Session type definition
 type Session = {
@@ -44,6 +45,8 @@ export default function LiveSessionsPage() {
   const [selectedSession, setSelectedSession] = useState<any>(null)
   const [showCreateSessionDialog, setShowCreateSessionDialog] = useState(false)
   const [sessions, setSessions] = useState<Session[]>([])
+
+  const { toast } = useToast();
   useEffect(() => {
     const role = localStorage.getItem("speakspace_user_role") || "participant"
     setUserRole(role)
@@ -157,22 +160,57 @@ setShowEditDialog(true);
     }
   }
 
-  // Handle joining a session (checks permissions)
-  const handleJoinSession = (session: any) => {
+  // Handle joining a session (checks permissions and creates/joins chat room)
+  const handleJoinSession = async (session: Session) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please login to join a session",
+        variant: "destructive"
+      })
+      return
+    }
+
     setSelectedSession(session)
     setShowPermissionDialog(true)
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(() => setMicPermission(true))
-      .catch(() => setMicPermission(false))
-      
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(() => setVideoPermission(true))
-      .catch(() => setVideoPermission(false))
+
+    try {
+      // Check media permissions
+      const [audioPermission, videoPermission] = await Promise.all([
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(() => true)
+          .catch(() => false),
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(() => true)
+          .catch(() => false)
+      ])
+
+      setMicPermission(audioPermission)
+      setVideoPermission(videoPermission)
+
+      // Update session participants
+      if (session.id && !session.participants.includes(user.id)) {
+        const sessionRef = doc(db, "sessions", session.id)
+        await updateDoc(sessionRef, {
+          participants: [...session.participants, user.id]
+        })
+      }
+    } catch (error) {
+      console.error("Error joining session:", error)
+      toast({
+        title: "Error",
+        description: "Failed to join session. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   const handleContinueToSession = () => {
+    if (!selectedSession) return
+    
     setShowPermissionDialog(false)
-    window.location.href = "/session"
+    // Navigate to session with session ID and user role
+    window.location.href = `/session?id=${selectedSession.id}&role=${userRole}`
   }
 
   useEffect(() => {
@@ -321,16 +359,51 @@ setShowEditDialog(true);
               <p className="text-slate-500 dark:text-slate-400 mt-1">Join ongoing sessions or view upcoming ones</p>
             </div>
             {userRole == "moderator" && (
-            <Button
-            className="mt-4 md:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
-            size="lg"
-            onClick={() => setShowCreateSessionDialog(true)}
-          >
-            <Calendar className="mr-2 h-5 w-5" />
-            Create Session
-          </Button>
-          
-            )}
+  <div className="flex items-center gap-4 mt-4 md:mt-0">
+    <Button
+      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
+      size="lg"
+      onClick={() => setShowCreateSessionDialog(true)}
+    >
+      <Calendar className="mr-2 h-5 w-5" />
+      Create Session
+    </Button>
+
+    <Button
+      variant="default"
+      size="icon"
+      onClick={async () => {
+        const roomName = "JitsiRoom_" + Math.random().toString(36).substr(2, 9);
+        const meetURL = `https://meet.jit.si/${roomName}`;
+        await navigator.clipboard.writeText(meetURL);
+        // Ideally use a toast instead of alert
+        toast({
+          title: "Success",
+          description: "Room link copied to clipboard."
+        });
+      }}
+      className="bg-green-600 hover:bg-green-700"
+      title="Copy room link"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-5 w-5"
+      >
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+    </Button>
+  </div>
+)}
+
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -405,10 +478,7 @@ setShowEditDialog(true);
                         maxParticipants={session.maxParticipants}
                         tags={session.tags}
                         status={session.status}
-                        onJoin={() => handleJoinSession({
-                          title: session.title,
-                          rules: "Default session rules",
-                        })}
+                        onJoin={() => handleJoinSession(session)}
                       />
                     ))
                   )}

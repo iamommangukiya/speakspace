@@ -19,7 +19,7 @@ type User = {
   id: string
   name: string
   email: string
-  avatar?: string
+  avatar: string
   role: string // Changed from optional to required
 }
 

@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { StarRating } from "@/components/star-rating"
 import { useAuth } from "@/components/auth-provider"
 import { Badge } from "@/components/ui/badge"
+import { ChatRoom } from "@/components/chat-room";
 
 export function SessionInterface() {
   const { user } = useAuth()
@@ -181,23 +182,12 @@ export function SessionInterface() {
             <TabsTrigger value="feedback">Feedback</TabsTrigger>
           </TabsList>
           <TabsContent value="chat" className="mt-4">
-            <Card className="shadow-sm border-0 bg-white">
+            <Card className="shadow-sm border-0 bg-white h-[600px]">
               <CardHeader>
                 <CardTitle>Session Chat</CardTitle>
               </CardHeader>
-              <CardContent className="h-[500px] overflow-y-auto space-y-4">
-                <ChatMessage
-                  name="Sarah"
-                  role="Moderator"
-                  message="Welcome everyone to this technical interview practice session. We'll be focusing on system design questions today."
-                  time="10:02 AM"
-                />
-                <ChatMessage
-                  name="Mike"
-                  role="Evaluator"
-                  message="Remember to explain your thought process clearly as you work through the problems."
-                  time="10:03 AM"
-                />
+              <CardContent className="h-full p-0">
+                <ChatRoom sessionId="session_123" />
                 <ChatMessage
                   name="You"
                   role="Participant"
