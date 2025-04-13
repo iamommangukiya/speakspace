@@ -2,9 +2,9 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import axios from "axios"
-import { getFirestore, collection, addDoc } from "firebase/firestore"
+import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs } from "firebase/firestore"
 import { useAuth } from "@/components/auth-provider"
 // First install axios using: npm install axios
 // Or if using yarn: yarn add axios
@@ -59,6 +59,8 @@ export default function ResumePage() {
   const [resumeFeedback, setResumeFeedback] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [resumeTips, setResumeTips] = useState<string[]>([])
+  const [isLoadingTips, setIsLoadingTips] = useState(false)
 
   
 
@@ -94,6 +96,32 @@ export default function ResumePage() {
     skills: [],
   })
 
+  useEffect(() => {
+    const fetchResumeTips = async () => {
+      if (!user?.id) return
+      setIsLoadingTips(true)
+      try {
+        const db = getFirestore()
+        const q = query(
+          collection(db, 'resumeAnalyses'),
+          where('userId', '==', user.id),
+          orderBy('timestamp', 'desc'),
+          limit(1)
+        )
+        const querySnapshot = await getDocs(q)
+        if (!querySnapshot.empty) {
+          const latestAnalysis = querySnapshot.docs[0].data()
+          setResumeTips(latestAnalysis.feedback)
+        }
+      } catch (error) {
+        console.error('Error fetching resume tips:', error)
+      } finally {
+        setIsLoadingTips(false)
+      }
+    }
+    fetchResumeTips()
+  }, [user?.id])
+
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -103,8 +131,8 @@ export default function ResumePage() {
       try {
         // First upload to Cloudflare R2
         const r2FormData = new FormData()
-        r2FormData.append('file', file)
-        const r2Response = await axios.post('/api/upload-resume', r2FormData, {
+        r2FormData.append('resume', file)
+        const r2Response = await axios.post('http://localhost:5000/api/analyze-resume?resume', r2FormData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -129,14 +157,14 @@ export default function ResumePage() {
         // Store results in Firebase Firestore
         if (response.data) {
           
-          const db = getFirestore()
-          await addDoc(collection(db, 'resumeAnalyses'), {
-            userId: user?.id,
-            fileUrl,
-            score: response.data.score,
-            feedback: response.data.feedback,
-            timestamp: new Date().toISOString()
-          })
+          // const db = getFirestore()
+          // await addDoc(collection(db, 'resumeAnalyses'), {
+          //   userId: user?.id,
+          //   fileUrl,
+          //   score: response.data.score,
+          //   feedback: response.data.feedback,
+          //   timestamp: new Date().toISOString()
+          // })
         }
 
         console.log('Resume analysis response:', response.data) // Log the response data
@@ -322,26 +350,24 @@ export default function ResumePage() {
                            </CardHeader>
                            <CardContent>
                              <div className="space-y-6">
-                               <ResumeTip
-                                 title="Highlight System Design Experience"
-                                 description="Based on your strong performance in system design discussions, emphasize projects where you've designed scalable systems."
-                               />
-                               <ResumeTip
-                                 title="Quantify Your Achievements"
-                                 description="Add specific metrics to your accomplishments. For example, 'Improved application performance by 40%' rather than just 'Improved application performance'."
-                               />
-                               <ResumeTip
-                                 title="Add Communication Skills"
-                                 description="Your communication scores are consistently high. Include 'Clear technical communication' as a key skill on your resume."
-                               />
-                               <ResumeTip
-                                 title="Tailor Your Resume"
-                                 description="Customize your resume for each job application to highlight relevant experience and skills for that specific role."
-                               />
-                               <ResumeTip
-                                 title="Include Problem-Solving Examples"
-                                 description="Add a brief example of a complex problem you solved, as your logical reasoning scores show this is a strength."
-                               />
+                               {isLoadingTips ? (
+                                 <div className="text-center py-4">
+                                   <div className="animate-pulse text-blue-600">Loading tips...</div>
+                                 </div>
+                               ) : resumeTips.length > 0 ? (
+                                 resumeTips.map((tip, index) => (
+                                   <ResumeTip
+                                     key={index}
+                                     title={tip.split(':')[0]}
+                                     description={tip.split(':')[1]}
+                                   />
+                                 ))
+                               ) : (
+                                 <ResumeTip
+                                   title="No tips available"
+                                   description="Upload your resume to get personalized feedback and suggestions."
+                                 />
+                               )}
                              </div>
                            </CardContent>
                          </Card>

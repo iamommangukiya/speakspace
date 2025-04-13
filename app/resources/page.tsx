@@ -1,3 +1,4 @@
+"use client"
 import React from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
@@ -45,6 +46,12 @@ export default function Resources() {
       <MainNav />
       <main className="container mx-auto pt-24 pb-16 px-4">
         <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Resource
+            </Button>
+          </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Add New Resource</DialogTitle>
@@ -83,12 +90,7 @@ export default function Resources() {
             <p className="text-slate-500 mt-1">Guides, tips, and materials to help you improve</p>
           </div>
           <div className="mt-4 md:mt-0 flex gap-3">
-            <DialogTrigger asChild>
-              <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Resource
-              </Button>
-            </DialogTrigger>
+            
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
