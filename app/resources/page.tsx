@@ -7,6 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { BookOpen, Download, FileText, Filter, Search, Video } from "lucide-react"
 import { db } from "@/lib/firebase"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
+
+const storage = getStorage()
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
+
+const storage = getStorage()
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -74,6 +80,32 @@ export default function Resources() {
                 </Label>
                 <Input id="tags" className="col-span-3" />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="resourceType" className="text-right">
+                  Resource Type
+                </Label>
+                <select id="resourceType" className="col-span-3 p-2 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" onChange={(e) => setType(e.target.value)}>
+                  <option value="guide">Guide</option>
+                  <option value="pdf">PDF</option>
+                  <option value="link">Link</option>
+                </select>
+              </div>
+              {type === 'pdf' && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="file" className="text-right">
+                    Upload PDF
+                  </Label>
+                  <Input id="file" type="file" accept=".pdf" className="col-span-3" />
+                </div>
+              )}
+              {type === 'link' && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="url" className="text-right">
+                    Resource URL
+                  </Label>
+                  <Input id="url" type="url" placeholder="https://example.com" className="col-span-3" />
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
