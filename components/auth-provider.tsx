@@ -20,7 +20,7 @@ type User = {
   name: string
   email: string
   avatar?: string
-  role?: string
+  role: string // Changed from optional to required
 }
 
 type AuthContextType = {
@@ -31,6 +31,7 @@ type AuthContextType = {
   register: (name: string, email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<void>
   logout: () => void
+  canCreateMeeting: boolean // Add this new property
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -131,19 +132,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true)
     try {
-      // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const firebaseUser = userCredential.user
       
-      // Create user document in Firestore
       await setDoc(doc(db, "users", firebaseUser.uid), {
         name,
         email,
-        avatar: `/placeholder.svg?height=200&width=200&text=${name
-          .split(" ")
-          .map((n) => n[0])
-          .join("")}`
-,
+        avatar: `/placeholder.svg?height=200&width=200&text=${name.split(" ").map((n) => n[0]).join("")}`,
+        role: 'participant', // Set default role
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp()
       })
@@ -179,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         loginWithGoogle,
         logout,
+        canCreateMeeting: user?.role === 'moderator' // Add this line
       }}
     >
       {children}
