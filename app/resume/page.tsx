@@ -3,6 +3,12 @@
 import type React from "react"
 
 import { useState } from "react"
+import axios from "axios"
+import { getFirestore, collection, addDoc } from "firebase/firestore"
+import { useAuth } from "@/components/auth-provider"
+// First install axios using: npm install axios
+// Or if using yarn: yarn add axios
+// Then add @types/axios: npm install @types/axios
 import { MainNav } from "@/components/main-nav"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,12 +19,48 @@ import { Textarea } from "@/components/ui/textarea"
 import { UploadIcon as FileUpload, Download, FileText, Plus, Star, Trash2 } from "lucide-react"
 import { StarRating } from "@/components/star-rating"
 
+function parseHtmlFeedback(html: string): string[] {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  
+  const feedbackItems: string[] = []
+  
+  // Extract strengths
+  const strengths = doc.querySelector('li:has(> strong:contains(\"Strengths\")) > ul')
+  if (strengths) {
+    strengths.querySelectorAll('li').forEach(item => {
+      feedbackItems.push(`✅ Strength: ${item.textContent?.trim() || ''}`)
+    })
+  }
+  
+  // Extract weaknesses
+  const weaknesses = doc.querySelector('li:has(> strong:contains(\"Weaknesses\")) > ul')
+  if (weaknesses) {
+    weaknesses.querySelectorAll('li').forEach(item => {
+      feedbackItems.push(`⚠️ Improvement: ${item.textContent?.trim() || ''}`)
+    })
+  }
+  
+  // Extract suggestions
+  const suggestions = doc.querySelector('li:has(> strong:contains(\"Suggestions\")) > ul')
+  if (suggestions) {
+    suggestions.querySelectorAll('li').forEach(item => {
+      feedbackItems.push(`💡 Suggestion: ${item.textContent?.trim() || ''}`)
+    })
+  }
+  
+  return feedbackItems.length > 0 ? feedbackItems : ['Could not parse feedback']
+}
+
 export default function ResumePage() {
+  const { user } = useAuth()
   const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [resumeScore, setResumeScore] = useState<number | null>(null)
   const [resumeFeedback, setResumeFeedback] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+
+  
 
   // Resume builder state
   const [resumeData, setResumeData] = useState({
@@ -52,29 +94,69 @@ export default function ResumePage() {
     skills: [],
   })
 
-  const handleResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setResumeFile(e.target.files[0])
+      const file = e.target.files[0]
+      setResumeFile(file)
       setIsUploading(true)
 
-      // Simulate upload process
-      setTimeout(() => {
+      try {
+        // First upload to Cloudflare R2
+        const r2FormData = new FormData()
+        r2FormData.append('file', file)
+        const r2Response = await axios.post('/api/upload-resume', r2FormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+        const fileUrl = (r2Response.data as { url: string }).url
+
+        // Then analyze with local service
+        const formData = new FormData()
+        formData.append('resume', file)
+        
+        interface ResumeAnalysisResponse {
+          score: number
+          feedback: string[]
+          analysis?: string
+        }
+        const response = await axios.post<ResumeAnalysisResponse>('http://localhost:5000/api/analyze-resume', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        // Store results in Firebase Firestore
+        if (response.data) {
+          
+          const db = getFirestore()
+          await addDoc(collection(db, 'resumeAnalyses'), {
+            userId: user?.id,
+            fileUrl,
+            score: response.data.score,
+            feedback: response.data.feedback,
+            timestamp: new Date().toISOString()
+          })
+        }
+
+        console.log('Resume analysis response:', response.data) // Log the response data
+        
         setIsUploading(false)
         setIsAnalyzing(true)
-
-        // Simulate analysis process
-        setTimeout(() => {
-          setIsAnalyzing(false)
-          setResumeScore(7.5)
-          setResumeFeedback([
-            "Your resume lacks quantifiable achievements",
-            "Technical skills section could be more comprehensive",
-            "Consider adding a projects section to showcase your work",
-            "Education section is well-structured",
-            "Professional summary is concise but could be more impactful",
-          ])
-        }, 2000)
-      }, 1500)
+        
+        // Set the response data to state
+        setResumeScore(response.data.score)
+        setResumeFeedback(
+          response.data.analysis 
+            ? parseHtmlFeedback(response.data.analysis)
+            : response.data.feedback
+        )
+        setIsAnalyzing(false)
+      } catch (error) {
+        console.error('Error uploading resume:', error)
+        setIsUploading(false)
+        setIsAnalyzing(false)
+      }
     }
   }
 
@@ -114,15 +196,17 @@ export default function ResumePage() {
                           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
                             Supported formats: PDF, DOCX, RTF
                           </p>
-                          <Input
-                            type="file"
-                            accept=".pdf,.docx,.rtf"
-                            className="hidden"
-                            id="resume-upload"
-                            onChange={handleResumeUpload}
-                          />
                           <Label htmlFor="resume-upload" className="cursor-pointer">
-                            <Button>Select File</Button>
+                            <Input
+                              type="file"
+                              accept=".pdf,.docx,.rtf"
+                              className="hidden"
+                              id="resume-upload"
+                              onChange={handleResumeUpload}
+                            />
+                            <Button asChild>
+                              <span>Select File</span>
+                            </Button>
                           </Label>
                         </div>
                       ) : (
@@ -171,7 +255,20 @@ export default function ResumePage() {
                             </div>
                           )}
 
-                          <Button className="w-full">Download Detailed Report</Button>
+                          <Button className="w-full" onClick={() => {
+  if (resumeFile) {
+    const url = URL.createObjectURL(resumeFile);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = resumeFile.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}}>
+  Download Detailed Report
+</Button>
                         </div>
                       )}
                     </div>
@@ -180,7 +277,7 @@ export default function ResumePage() {
               </div>
 
               <div className="lg:col-span-2">
-                {resumeFeedback.length > 0 && (
+                {resumeFeedback && resumeFeedback.length > 0 && (
                   <Card className="shadow-sm border-0 bg-white dark:bg-slate-800">
                     <CardHeader>
                       <CardTitle>Resume Feedback</CardTitle>

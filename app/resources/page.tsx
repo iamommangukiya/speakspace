@@ -68,8 +68,8 @@ export default function Resources() {
           <TabsList className="mb-6">
             <TabsTrigger value="all">All Resources</TabsTrigger>
             <TabsTrigger value="interview">Interview Prep</TabsTrigger>
-            <TabsTrigger value="gd">Group Discussion</TabsTrigger>
-            <TabsTrigger value="resume">Resume Building</TabsTrigger>
+            <TabsTrigger value="gd">Question Bank</TabsTrigger>
+            {/* <TabsTrigger value="resume">Resume Building</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="all">
@@ -82,11 +82,11 @@ export default function Resources() {
                 tags={["Technical", "Interview", "Preparation"]}
               />
               <FeaturedResourceCard
-                title="Effective Group Discussion Techniques"
-                description="Learn how to contribute meaningfully in group discussions and stand out from the crowd."
+                title="Effective Question Bank Techniques"
+                description="Learn how to contribute meaningfully in Question Banks and stand out from the crowd."
                 type="Video Course"
                 icon={<Video className="h-6 w-6 text-indigo-600" />}
-                tags={["Group Discussion", "Communication", "Leadership"]}
+                tags={["Question Bank", "Communication", "Leadership"]}
               />
               <FeaturedResourceCard
                 title="Resume That Gets You Hired"
@@ -114,11 +114,11 @@ export default function Resources() {
                 tags={["Technical", "System Design"]}
               />
               <ResourceCard
-                title="Group Discussion Topics 2023"
+                title="Question Bank Topics 2023"
                 description="Current affairs and trending topics for GD practice."
                 type="List"
                 icon={<FileText className="h-5 w-5" />}
-                tags={["Group Discussion", "Current Affairs"]}
+                tags={["Question Bank", "Current Affairs"]}
               />
               <ResourceCard
                 title="Body Language in Interviews"
@@ -193,22 +193,22 @@ export default function Resources() {
           <TabsContent value="gd">
             <Card className="shadow-sm border-0 bg-white">
               <CardHeader>
-                <CardTitle>Group Discussion Resources</CardTitle>
-                <CardDescription>Materials to help you excel in group discussions</CardDescription>
+                <CardTitle>Question Bank Resources</CardTitle>
+                <CardDescription>Materials to help you excel in Question Banks</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12">
                   <h3 className="text-lg font-medium text-slate-600 mb-4">Switch to the "All Resources" tab</h3>
                   <p className="text-slate-500 max-w-md mx-auto">
                     We've simplified this demo to show all resources in one tab. In a full implementation, this tab
-                    would show group discussion-specific resources.
+                    would show Question Bank-specific resources.
                   </p>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="resume">
+          {/* <TabsContent value="resume">
             <Card className="shadow-sm border-0 bg-white">
               <CardHeader>
                 <CardTitle>Resume Building Resources</CardTitle>
@@ -224,7 +224,7 @@ export default function Resources() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </main>
     </div>

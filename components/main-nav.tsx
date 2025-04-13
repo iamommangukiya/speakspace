@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { BarChart3, BookOpen, Calendar, Home, MessageSquare, User } from "lucide-react"
+import { BarChart3, BookOpen, Calendar,Box, Home, MessageSquare, User } from "lucide-react"
 import { UserNav } from "@/components/user-nav"
 import { useEffect, useState } from "react"
 import { useAuth } from "@/components/auth-provider"
@@ -29,6 +29,11 @@ const navItems = [
     name: "Leaderboard",
     href: "/leaderboard",
     icon: BarChart3,
+  },
+  {
+    name: "Resources",
+    href: "/resources",
+    icon: Box,
   },
   {
     name: "Resume",

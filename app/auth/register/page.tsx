@@ -183,7 +183,10 @@ export default function RegisterPage() {
                 variant="outline" 
                 className="h-11 shadow-sm hover:shadow" 
                 disabled={isLoading}
-                onClick={handleGoogleLogin}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleGoogleLogin();
+                }}
               >
                 <Mail className="mr-2 h-4 w-4" />
                 Google
