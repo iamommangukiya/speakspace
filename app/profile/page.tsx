@@ -8,17 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Award, Calendar, Download, Edit, Star } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { StarRating } from "@/components/star-rating"
+import { EditProfileDialog } from "@/components/edit-profile-dialog"
+import { useState } from "react";
 
 export default function Profile() {
   const { user } = useAuth()
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
-  // Get initials for avatar
-  const getInitials = () => {
-    if (!user?.name) return "U"
-    return user.name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
+  const handleEditProfileClick = () => {
+    setIsEditDialogOpen(true)
   }
 
   return (
@@ -30,11 +28,13 @@ export default function Profile() {
             <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
             <p className="text-slate-500 mt-1">View and manage your account</p>
           </div>
-          <Button variant="outline" className="mt-4 md:mt-0">
+          <Button variant="outline" className="mt-4 md:mt-0" onClick={handleEditProfileClick}>
             <Edit className="mr-2 h-4 w-4" />
             Edit Profile
           </Button>
         </div>
+
+        <EditProfileDialog isOpen={isEditDialogOpen} onClose={() => setIsEditDialogOpen(false)} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div>
@@ -45,7 +45,15 @@ export default function Profile() {
               <CardContent>
                 <div className="flex flex-col items-center mb-6">
                   <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                    <span className="text-3xl font-bold text-blue-600">{getInitials()}</span>
+                    {(user as any)?.image ? (
+                      <img
+                        src={(user as any)?.image || ''}
+                        alt="Profile"
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-3xl font-bold text-blue-600">{user ? getInitials(user) : 'U'}</span>
+                    )}
                   </div>
                   <h2 className="text-xl font-bold">{user?.name || "User"}</h2>
                   <p className="text-slate-500">{user?.email || "user@example.com"}</p>
@@ -352,4 +360,16 @@ function ResumeTip({
       <p className="text-sm text-slate-600">{description}</p>
     </div>
   )
+}
+
+function getInitials(user: { name?: string }) {
+  if (!user?.name || typeof user.name !== 'string' || user.name.trim() === '') {
+    return 'U';
+  }
+  return user.name
+    .trim()
+    .split(' ')
+    .filter((part: string) => part.length > 0)
+    .map((n: string) => n[0].toUpperCase())
+    .join('');
 }

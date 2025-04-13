@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { MainNav } from "@/components/main-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -5,12 +8,172 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Filter, Search, Trophy } from "lucide-react"
+import { collection, getDocs, query, orderBy, limit, doc, updateDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { useAuth } from "@/components/auth-provider"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+
+// User type definition
+type User = {
+  id: string
+  name: string
+  avatar?: string
+  sessions: number
+  score: number
+  badges: string[]
+  improvement: string
+}
 
 export default function Leaderboard() {
+  const { user: currentUser } = useAuth()
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [userRole, setUserRole] = useState<string>('participant')
+  const [isEditing, setIsEditing] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+
+  const handleEditUser = (user: User) => {
+    setEditingUser({...user})
+    setIsEditing(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingUser) return
+    
+    try {
+      // Update user in Firestore
+      const userRef = doc(db, "users", editingUser.id)
+      await updateDoc(userRef, {
+        score: editingUser.score,
+        sessions: editingUser.sessions,
+        badges: editingUser.badges,
+        improvement: editingUser.improvement
+      })
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === editingUser.id ? editingUser : user
+      ))
+      
+      setIsEditing(false)
+      setEditingUser(null)
+    } catch (error) {
+      console.error("Error updating user:", error)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setEditingUser(null)
+  }
+
+  useEffect(() => {
+    // Get user role from localStorage
+    const role = localStorage.getItem("speakspace_user_role") || "participant"
+    setUserRole(role)
+    
+    const fetchUsers = async () => {
+      try {
+        setLoading(true)
+        const q = query(collection(db, "users"), orderBy("score", "desc"), limit(10))
+        const querySnapshot = await getDocs(q)
+        
+        const usersData = querySnapshot.docs.map(doc => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            name: data.name || "Anonymous User",
+            avatar: data.avatar || `/placeholder.svg?height=40&width=40&text=${data.name?.charAt(0) || "A"}`,
+            sessions: data.sessions || 0, // No random fallback
+            score: data.score || 0, // No random fallback
+            badges: data.badges || ["New User"],
+            improvement: data.improvement || "+0%"
+          }
+        }) as User[]
+        
+        setUsers(usersData)
+      } catch (error) {
+        console.error("Error fetching users:", error)
+        setUsers([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUsers()
+  }, [])
+
+  // Get top 3 users for the podium
+  const topUsers = users.slice(0, 3)
+  
+  // Get remaining users for the table
+  const remainingUsers = users.slice(3)
+
   return (
     <div className="min-h-screen bg-slate-50">
       <MainNav />
       <main className="container mx-auto pt-24 pb-16 px-4">
+        {/* Dialog for editing user statistics */}
+        <Dialog open={isEditing} onOpenChange={(open) => !open && handleCancelEdit()}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit User Statistics</DialogTitle>
+            </DialogHeader>
+            {editingUser && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="user-name">User Name</Label>
+                  <Input 
+                    id="user-name" 
+                    value={editingUser.name} 
+                    disabled 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-sessions">Sessions</Label>
+                  <Input 
+                    id="user-sessions" 
+                    type="number" 
+                    value={editingUser.sessions} 
+                    onChange={(e) => setEditingUser({...editingUser, sessions: parseInt(e.target.value)})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-score">Score (%)</Label>
+                  <Input 
+                    id="user-score" 
+                    type="number" 
+                    value={editingUser.score} 
+                    onChange={(e) => setEditingUser({...editingUser, score: parseInt(e.target.value)})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-improvement">Improvement</Label>
+                  <Input 
+                    id="user-improvement" 
+                    value={editingUser.improvement} 
+                    onChange={(e) => setEditingUser({...editingUser, improvement: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-badges">Badges (comma separated)</Label>
+                  <Input 
+                    id="user-badges" 
+                    value={editingUser.badges.join(', ')} 
+                    onChange={(e) => setEditingUser({...editingUser, badges: e.target.value.split(',').map(b => b.trim())})}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
+              <Button onClick={handleSaveEdit}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
@@ -33,6 +196,7 @@ export default function Leaderboard() {
         </div>
 
         <Tabs defaultValue="overall" className="mb-8">
+          {/* Tab navigation remains the same */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <TabsList className="mb-4 md:mb-0">
               <TabsTrigger value="overall">Overall</TabsTrigger>
@@ -60,119 +224,97 @@ export default function Leaderboard() {
                 <CardDescription>Based on combined scores across all metrics</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <TopPerformerCard
-                    position={2}
-                    name="Emily Chen"
-                    score={92}
-                    avatar="/placeholder.svg?height=80&width=80&text=EC"
-                    sessions={28}
-                  />
-                  <TopPerformerCard
-                    position={1}
-                    name="Michael Johnson"
-                    score={95}
-                    avatar="/placeholder.svg?height=80&width=80&text=MJ"
-                    sessions={42}
-                    isTop={true}
-                  />
-                  <TopPerformerCard
-                    position={3}
-                    name="Sarah Williams"
-                    score={89}
-                    avatar="/placeholder.svg?height=80&width=80&text=SW"
-                    sessions={23}
-                  />
-                </div>
+                {loading ? (
+                  <div className="text-center py-12">
+                    <p className="text-slate-500">Loading leaderboard data...</p>
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-12">
+                    <h3 className="text-lg font-medium text-slate-600 mb-4">
+                      No users found
+                    </h3>
+                    <p className="text-slate-500 max-w-md mx-auto">
+                      Be the first to join the leaderboard by participating in sessions!
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                      {topUsers.length >= 2 && (
+                        <TopPerformerCard
+                          position={2}
+                          name={topUsers[1].name}
+                          score={topUsers[1].score}
+                          avatar={topUsers[1].avatar || ""}
+                          sessions={topUsers[1].sessions}
+                        />
+                      )}
+                      {topUsers.length >= 1 && (
+                        <TopPerformerCard
+                          position={1}
+                          name={topUsers[0].name}
+                          score={topUsers[0].score}
+                          avatar={topUsers[0].avatar || ""}
+                          sessions={topUsers[0].sessions}
+                          isTop={true}
+                        />
+                      )}
+                      {topUsers.length >= 3 && (
+                        <TopPerformerCard
+                          position={3}
+                          name={topUsers[2].name}
+                          score={topUsers[2].score}
+                          avatar={topUsers[2].avatar || ""}
+                          sessions={topUsers[2].sessions}
+                        />
+                      )}
+                    </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Rank</th>
-                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">User</th>
-                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Sessions</th>
-                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Avg. Score</th>
-                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Badges</th>
-                        <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Improvement</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <LeaderboardRow
-                        rank={4}
-                        name="Alex Doe"
-                        avatar="/placeholder.svg?height=40&width=40&text=AD"
-                        sessions={19}
-                        score={87}
-                        badges={["Communication Pro", "Quick Thinker"]}
-                        improvement="+12%"
-                        isCurrentUser={true}
-                      />
-                      <LeaderboardRow
-                        rank={5}
-                        name="Jessica Lee"
-                        avatar="/placeholder.svg?height=40&width=40&text=JL"
-                        sessions={15}
-                        score={85}
-                        badges={["Team Player"]}
-                        improvement="+8%"
-                      />
-                      <LeaderboardRow
-                        rank={6}
-                        name="David Kim"
-                        avatar="/placeholder.svg?height=40&width=40&text=DK"
-                        sessions={22}
-                        score={83}
-                        badges={["Consistent Performer", "Communication Pro"]}
-                        improvement="+5%"
-                      />
-                      <LeaderboardRow
-                        rank={7}
-                        name="Rachel Green"
-                        avatar="/placeholder.svg?height=40&width=40&text=RG"
-                        sessions={17}
-                        score={81}
-                        badges={["Quick Thinker"]}
-                        improvement="+15%"
-                      />
-                      <LeaderboardRow
-                        rank={8}
-                        name="Thomas Wilson"
-                        avatar="/placeholder.svg?height=40&width=40&text=TW"
-                        sessions={14}
-                        score={79}
-                        badges={["Team Player"]}
-                        improvement="+7%"
-                      />
-                      <LeaderboardRow
-                        rank={9}
-                        name="Olivia Martinez"
-                        avatar="/placeholder.svg?height=40&width=40&text=OM"
-                        sessions={12}
-                        score={78}
-                        badges={["Communication Pro"]}
-                        improvement="+10%"
-                      />
-                      <LeaderboardRow
-                        rank={10}
-                        name="James Taylor"
-                        avatar="/placeholder.svg?height=40&width=40&text=JT"
-                        sessions={10}
-                        score={76}
-                        badges={["Consistent Performer"]}
-                        improvement="+6%"
-                      />
-                    </tbody>
-                  </table>
-                </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Rank</th>
+                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">User</th>
+                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Sessions</th>
+                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Avg. Score</th>
+                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Badges</th>
+                            <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Improvement</th>
+                            {userRole === 'evaluator' && (
+                              <th className="text-left py-3 px-4 font-medium text-sm text-slate-500">Actions</th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {remainingUsers.map((user, index) => (
+                            <LeaderboardRow
+                              key={user.id}
+                              rank={index + 4}
+                              name={user.name}
+                              avatar={user.avatar || ""}
+                              sessions={user.sessions}
+                              score={user.score}
+                              badges={user.badges}
+                              improvement={user.improvement}
+                              isCurrentUser={user.id === currentUser?.id}
+                              isEvaluator={userRole === 'evaluator'}
+                              onEdit={() => handleEditUser(user)}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
 
-                <div className="flex justify-center mt-6">
-                  <Button variant="outline">Load More</Button>
-                </div>
+                    <div className="flex justify-center mt-6">
+                      <Button variant="outline">Load More</Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
+          {/* Other tabs remain the same */}
           <TabsContent value="confidence">
             <Card className="shadow-sm border-0 bg-white">
               <CardHeader>
@@ -233,26 +375,28 @@ export default function Leaderboard() {
             </Card>
           </TabsContent>
         </Tabs>
-
-        <Card className="shadow-sm border-0 bg-white mt-8">
-          <CardHeader>
-            <CardTitle>Your Statistics</CardTitle>
-            <CardDescription>How you compare to others</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <StatCard title="Overall Rank" value="4th" description="Top 5%" />
-              <StatCard title="Confidence" value="75%" description="Above average" />
-              <StatCard title="Communication" value="82%" description="Top 10%" />
-              <StatCard title="Logical Reasoning" value="68%" description="Improving fast" />
-            </div>
-          </CardContent>
-        </Card>
       </main>
     </div>
   )
 }
 
+// Helper function to get ordinal suffix for numbers
+function getOrdinalSuffix(i: number): string {
+  const j = i % 10,
+    k = i % 100;
+  if (j === 1 && k !== 11) {
+    return "st";
+  }
+  if (j === 2 && k !== 12) {
+    return "nd";
+  }
+  if (j === 3 && k !== 13) {
+    return "rd";
+  }
+  return "th";
+}
+
+// Keep the existing component definitions
 function TopPerformerCard({
   position,
   name,
@@ -307,6 +451,8 @@ function LeaderboardRow({
   badges,
   improvement,
   isCurrentUser = false,
+  isEvaluator = false,
+  onEdit,
 }: {
   rank: number
   name: string
@@ -316,6 +462,8 @@ function LeaderboardRow({
   badges: string[]
   improvement: string
   isCurrentUser?: boolean
+  isEvaluator?: boolean
+  onEdit?: () => void
 }) {
   return (
     <tr className={`border-b ${isCurrentUser ? "bg-blue-50" : ""} hover:bg-slate-50 transition-colors`}>
@@ -356,6 +504,13 @@ function LeaderboardRow({
       <td className="py-4 px-4">
         <span className="text-green-600 bg-green-100 px-2 py-1 rounded text-sm">{improvement}</span>
       </td>
+      {isEvaluator && (
+        <td className="py-4 px-4">
+          <Button variant="ghost" size="sm" onClick={onEdit}>
+            Edit
+          </Button>
+        </td>
+      )}
     </tr>
   )
 }

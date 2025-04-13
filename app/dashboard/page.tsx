@@ -42,16 +42,28 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user?.name?.split(" ")[0] || "User"}!</h1>
             <p className="text-slate-500 mt-1">Track your progress and join discussions</p>
           </div>
-          <Button
-            className="mt-4 md:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
-            size="lg"
-            asChild
-          >
-            <Link href="/live-sessions" rel="noopener">
-              <MessageSquare className="mr-2 h-5 w-5" />
-              Start Practice
-            </Link>
-          </Button>
+          <div className="flex flex-col md:flex-row gap-3">
+            <Button
+              className="mt-4 md:mt-0 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md transition-all hover:shadow-lg"
+              size="lg"
+              asChild
+            >
+              <Link href="/live-sessions" rel="noopener">
+                <MessageSquare className="mr-2 h-5 w-5" />
+                Start Practice
+              </Link>
+            </Button>
+            <Button
+              className="mt-4 md:mt-0 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 shadow-md transition-all hover:shadow-lg"
+              size="lg"
+              asChild
+            >
+              <Link href="/create-meeting" rel="noopener">
+                <Users className="mr-2 h-5 w-5" />
+                Create GD
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
